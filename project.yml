@@ -1,6 +1,7 @@
 name: SAETASaldoApp
 options:
   bundleIdPrefix: com.saetasaldo
+  xcodeVersion: "15.0"
 targets:
   SAETASaldoApp:
     type: application
