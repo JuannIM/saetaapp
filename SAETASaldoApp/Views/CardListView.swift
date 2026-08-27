@@ -68,8 +68,8 @@ struct CardListView: View {
                 }
             }
 
-            if !viewModel.cards.isEmpty {
-                ToolbarItem(placement: .navigationBarLeading) {
+            ToolbarItem(placement: .navigationBarLeading) {
+                if !viewModel.cards.isEmpty {
                     Button {
                         Task { await viewModel.refreshAllBalances() }
                     } label: {

@@ -332,8 +332,7 @@ struct DisclaimerView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Label("Aviso importante", systemImage: "info.circle")
-                .font(.caption)
-                .fontWeight(.semibold)
+                .font(.caption.weight(.semibold))
                 .foregroundColor(.secondary)
 
             Text("El saldo se consulta en el portal oficial de SAETA (salta.miredbus.com.ar). Los datos pueden tener un desfase de 24 a 48 horas hábiles con respecto al saldo real de la tarjeta, ya que se actualizan al usar el colectivo. Esta app NO modifica el saldo de tu tarjeta.")

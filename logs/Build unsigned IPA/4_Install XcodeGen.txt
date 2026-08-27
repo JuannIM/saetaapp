@@ -1,0 +1,30 @@
+﻿2026-08-27T15:52:57.4304770Z ##[group]Run brew install xcodegen
+2026-08-27T15:52:57.4305100Z [36;1mbrew install xcodegen[0m
+2026-08-27T15:52:57.4353290Z shell: /bin/bash -e {0}
+2026-08-27T15:52:57.4353670Z ##[endgroup]
+2026-08-27T15:52:59.8737980Z ##[warning]The following taps are not trusted:
+  aws/tap
+
+Homebrew is currently ignoring formulae, casks and commands from these taps because tap trust is required.
+Untap them with:
+  brew untap aws/tap
+Trust specific formulae, casks and commands with:
+  brew trust --formula <user>/<tap>/<formula>
+  brew trust --cask <user>/<tap>/<cask>
+  brew trust --command <user>/<tap>/<command>
+Whole-tap trust is broader and includes all current and future formulae,
+casks and commands from the listed taps. Trust whole taps with:
+  brew trust aws/tap
+To disable trust checks:
+  export HOMEBREW_NO_REQUIRE_TAP_TRUST=1
+This is not recommended and will be removed in a later release.
+For more information, see:
+  https://docs.brew.sh/Tap-Trust
+
+2026-08-27T15:53:00.4350100Z [34m==>[0m [1mWould install 1 formula:[0m
+2026-08-27T15:53:00.4350560Z xcodegen
+2026-08-27T15:53:00.4359560Z [34m==>[0m [1mDownloading https://ghcr.io/v2/homebrew/core/xcodegen/manifests/2.45.4[0m
+2026-08-27T15:53:00.7845910Z [32m==>[0m [1mFetching downloads for: [32mxcodegen[39m[0m
+2026-08-27T15:53:01.1604120Z ✔︎ Bottle xcodegen (2.45.4)
+2026-08-27T15:53:01.2931150Z [34m==>[0m [1mPouring xcodegen--2.45.4.arm64_sonoma.bottle.tar.gz[0m
+2026-08-27T15:53:01.3916410Z 🍺  /opt/homebrew/Cellar/xcodegen/2.45.4: 38 files, 7.6MB
