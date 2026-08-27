@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Nombre de la app -->
+	<key>CFBundleName</key>
+	<string>SAETA Saldo</string>
+
+	<!-- Identificador único de la app -->
+	<key>CFBundleIdentifier</key>
+	<string>com.saetasaldo.app</string>
+
+	<!-- Versión de la app -->
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
+
+	<!-- Build number -->
+	<key>CFBundleVersion</key>
+	<string>1</string>
+
+	<!-- Versión mínima de iOS requerida: iOS 15+ para NFC Tag Reader y SwiftUI -->
+	<key>MinimumOSVersion</key>
+	<string>15.0</string>
+
+	<!-- Soporte de escenas (SwiftUI App lifecycle) -->
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict/>
+	</dict>
+
+	<!-- PERMISOS NFC -->
+	<!-- Descripción requerida por Apple para el uso de NFC -->
+	<key>NFCReaderUsageDescription</key>
+	<string>SAETA Saldo usa NFC para leer el identificador de tu tarjeta de transporte SAETA. Esto permite reconocer tu tarjeta automáticamente sin tener que ingresar el número manualmente.</string>
+
+	<!-- Tipos de sesión NFC habilitados -->
+	<!-- "TAG" permite leer tags físicos (tarjetas NFC) -->
+	<key>com.apple.developer.nfc.readersession.formats</key>
+	<array>
+		<string>TAG</string>
+	</array>
+
+	<!-- PERMISOS DE RED -->
+	<!-- Permitir conexión al portal SAETA (HTTP y HTTPS) -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<!-- Configuración de excepciones para el portal SAETA que puede usar HTTP -->
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>salta.miredbus.com.ar</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<false/>
+				<key>NSExceptionMinimumTLSVersion</key>
+				<string>TLSv1.2</string>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+			</dict>
+			<key>saetasalta.com.ar</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<false/>
+				<key>NSExceptionMinimumTLSVersion</key>
+				<string>TLSv1.2</string>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
+
+	<!-- ORIENTACIÓN DE PANTALLA -->
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+	</array>
+
+	<!-- Soporte de iPad (solo portrait) -->
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+
+	<!-- Icono de la app -->
+	<key>CFBundleIcons</key>
+	<dict>
+		<key>CFBundlePrimaryIcon</key>
+		<dict>
+			<key>CFBundleIconFiles</key>
+			<array>
+				<string>AppIcon</string>
+			</array>
+			<key>CFBundleIconName</key>
+			<string>AppIcon</string>
+		</dict>
+	</dict>
+
+	<!-- Tipo de bundle -->
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+
+	<!-- Ejecutable -->
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+
+	<!-- Desarrollo -->
+	<key>CFBundleDevelopmentRegion</key>
+	<string>es</string>
+
+	<!-- Idiomas soportados -->
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>es</string>
+	</array>
+
+	<!-- Idioma principal -->
+	<key>NSHumanReadableCopyright</key>
+	<string>SAETA Saldo - App no oficial. Salta, Argentina.</string>
+
+	<!-- Soporte de pantalla completa -->
+	<key>UIRequiresFullScreen</key>
+	<false/>
+
+	<!-- Barra de estado -->
+	<key>UIStatusBarStyle</key>
+	<string>UIStatusBarStyleDefault</string>
+
+	<!-- Apariencia de la barra de navegación -->
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<true/>
+</dict>
+</plist>

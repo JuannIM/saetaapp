@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  SAETASaldoApp.entitlements
+  ═══════════════════════════════════════════════════════════════════════
+  IMPORTANTE: Este archivo es requerido para usar CoreNFC con NFCTagReaderSession.
+  
+  Sin el entitlement "com.apple.developer.nfc.readersession.formats" con valor "TAG",
+  el sistema operativo iOS NO permite usar NFCTagReaderSession.
+  
+  Este archivo debe estar firmado con un perfil de provisioning que incluya
+  la capacidad "Near Field Communication Tag Reading" en el Apple Developer Portal.
+  ═══════════════════════════════════════════════════════════════════════
+-->
+<plist version="1.0">
+<dict>
+	<!--
+	  Permiso para leer tags NFC físicos (tarjetas, llaves, etiquetas).
+	  "TAG" = NFCTagReaderSession (lectura de UID y datos del chip).
+	  "NDEF" = NFCNDEFReaderSession (lectura de datos formateados NDEF).
+	  
+	  Para las tarjetas SAETA usamos "TAG" porque necesitamos el UID del chip,
+	  no datos NDEF (las tarjetas de transporte no usan formato NDEF).
+	-->
+	<key>com.apple.developer.nfc.readersession.formats</key>
+	<array>
+		<string>TAG</string>
+	</array>
+</dict>
+</plist>

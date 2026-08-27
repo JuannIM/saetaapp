@@ -1,0 +1,23 @@
+name: SAETASaldoApp
+options:
+  bundleIdPrefix: com.saetasaldo
+targets:
+  SAETASaldoApp:
+    type: application
+    platform: iOS
+    deploymentTarget: "15.0"
+    sources: [SAETASaldoApp]
+    info:
+      path: SAETASaldoApp/Resources/Info.plist
+      properties:
+        UILaunchScreen: {}
+    entitlements:
+      path: SAETASaldoApp/Resources/SAETASaldoApp.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.saetasaldo.app
+        DEVELOPMENT_TEAM: ""
+        CODE_SIGNING_REQUIRED: "NO"
+        CODE_SIGN_IDENTITY: ""
+        CODE_SIGNING_ALLOWED: "NO"
+        ENABLE_BITCODE: "NO"
