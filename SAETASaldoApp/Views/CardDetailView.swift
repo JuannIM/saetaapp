@@ -8,6 +8,7 @@ struct CardDetailView: View {
     @EnvironmentObject var viewModel: CardListViewModel
     @Environment(\.openURL) var openURL
     @State private var isRefreshing = false
+    @State private var showingCaptchaSolver = false
 
 
     // Card actualizada desde el ViewModel
@@ -43,6 +44,9 @@ struct CardDetailView: View {
                         isRefreshing = true
                         await viewModel.refreshBalance(for: currentCard)
                         isRefreshing = false
+                        if viewModel.errorMessage?.contains("verificación manual") == true {
+                            showingCaptchaSolver = true
+                        }
                     }
                 }, onOpenWeb: {
                     if let url = viewModel.webPortalURL(for: currentCard) {
@@ -62,6 +66,30 @@ struct CardDetailView: View {
         .background(Color.appBackground)
         .navigationTitle(currentCard.alias)
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showingCaptchaSolver) {
+            NavigationView {
+                if let url = viewModel.webPortalURL(for: currentCard) {
+                    SAETAWebView(url: url) { balance in
+                        // Cuando el JS encuentra el saldo, actualizamos y cerramos
+                        var updatedCard = currentCard
+                        updatedCard.balance = balance
+                        updatedCard.lastUpdated = Date()
+                        viewModel.updateCard(updatedCard)
+                        viewModel.successMessage = "¡Saldo extraído con éxito!"
+                        showingCaptchaSolver = false
+                    }
+                    .navigationTitle("Resolver Captcha")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarLeading) {
+                            Button("Cerrar") {
+                                showingCaptchaSolver = false
+                            }
+                        }
+                    }
+                }
+            }
+        }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
