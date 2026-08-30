@@ -7,13 +7,18 @@ struct CardDetailView: View {
     let card: SAETACard
     @EnvironmentObject var viewModel: CardListViewModel
     @Environment(\.openURL) var openURL
-    @State private var isRefreshing = false
-    @State private var showingCaptchaSolver = false
-
 
     // Card actualizada desde el ViewModel
     private var currentCard: SAETACard {
         viewModel.cards.first { $0.id == card.id } ?? card
+    }
+
+    // El WebView se muestra cuando el ViewModel pone esta tarjeta como pendiente
+    private var showingWebView: Binding<Bool> {
+        Binding(
+            get: { viewModel.cardPendingWebBalance?.id == card.id },
+            set: { if !$0 { viewModel.cardPendingWebBalance = nil } }
+        )
     }
 
     var body: some View {
@@ -41,12 +46,8 @@ struct CardDetailView: View {
                 // MARK: - Acciones
                 ActionsSection(card: currentCard, onRefresh: {
                     Task {
-                        isRefreshing = true
+                        // Directamente abre el WebView (no hay REST disponible)
                         await viewModel.refreshBalance(for: currentCard)
-                        isRefreshing = false
-                        if viewModel.errorMessage?.contains("verificación manual") == true {
-                            showingCaptchaSolver = true
-                        }
                     }
                 }, onOpenWeb: {
                     if let url = viewModel.webPortalURL(for: currentCard) {
@@ -66,44 +67,34 @@ struct CardDetailView: View {
         .background(Color.appBackground)
         .navigationTitle(currentCard.alias)
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showingCaptchaSolver) {
+        // WebView integrado: se abre automáticamente al tocar "Actualizar Saldo"
+        .sheet(isPresented: showingWebView) {
             NavigationView {
-                if let url = viewModel.webPortalURL(for: currentCard) {
-                    SAETAWebView(url: url) { balance in
-                        // Cuando el JS encuentra el saldo, actualizamos y cerramos
-                        var updatedCard = currentCard
-                        updatedCard.balance = balance
-                        updatedCard.lastUpdated = Date()
-                        viewModel.updateCard(updatedCard)
-                        viewModel.successMessage = "¡Saldo extraído con éxito!"
-                        showingCaptchaSolver = false
-                    }
-                    .navigationTitle("Resolver Captcha")
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarLeading) {
-                            Button("Cerrar") {
-                                showingCaptchaSolver = false
-                            }
+                SAETAWebView(cardNumber: currentCard.cardNumber) { balance in
+                    // El JS detectó el saldo → guardar y cerrar
+                    viewModel.saveBalance(balance, for: currentCard)
+                }
+                .navigationTitle("Consultar Saldo SAETA")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button("Cerrar") {
+                            viewModel.cardPendingWebBalance = nil
                         }
                     }
                 }
             }
         }
+
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
                     Task {
-                        isRefreshing = true
                         await viewModel.refreshBalance(for: currentCard)
-                        isRefreshing = false
                     }
                 } label: {
                     Image(systemName: "arrow.clockwise")
-                        .rotationEffect(.degrees(isRefreshing ? 360 : 0))
-                        .animation(isRefreshing ? .linear(duration: 1).repeatForever(autoreverses: false) : .default, value: isRefreshing)
                 }
-                .disabled(isRefreshing)
             }
         }
     }

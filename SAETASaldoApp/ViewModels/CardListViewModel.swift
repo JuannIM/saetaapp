@@ -13,12 +13,12 @@ class CardListViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String? = nil
     @Published var successMessage: String? = nil
-
+    /// Controla si se debe mostrar el WebView de consulta de saldo
+    @Published var cardPendingWebBalance: SAETACard? = nil
 
     // MARK: - Servicios
     private let storageService = CardStorageService()
     private let balanceService = BalanceService()
-    private let nfcService = NFCService()
 
     // MARK: - Inicialización
     init() {
@@ -46,64 +46,36 @@ class CardListViewModel: ObservableObject {
         storageService.upsert(card: card, in: &cards)
     }
 
-    // MARK: - Actualizar saldo de una tarjeta
+    // MARK: - Actualizar saldo (vía WebView)
+    /// El portal SAETA usa un certificado SSL con CA autofirmada que iOS rechaza
+    /// en URLSession/ATS. La única forma confiable de leer el saldo es usando
+    /// WKWebView con un delegate que acepte ese certificado.
+    /// Este método señaliza al CardDetailView que abra el WebView integrado.
     func refreshBalance(for card: SAETACard) async {
-        isLoading = true
         errorMessage = nil
+        cardPendingWebBalance = card
+    }
 
-        do {
-            let result = try await balanceService.fetchBalance(for: card.cardNumber)
-
-            // Actualizar la tarjeta con el nuevo saldo
-            var updatedCard = card
-            updatedCard.balance = result.balance
-            updatedCard.lastUpdated = result.queryDate
-            storageService.upsert(card: updatedCard, in: &cards)
-
-            successMessage = "Saldo actualizado: \(updatedCard.formattedBalance)"
-        } catch let error as SAETAError {
-            errorMessage = error.errorDescription
-
-            // Para el caso de captcha, dar información adicional al usuario
-            if case .captchaRequired = error {
-                errorMessage = "El portal SAETA requiere verificación manual. Abrí el sitio web para consultar tu saldo."
-            }
-        } catch {
-            errorMessage = "Error inesperado: \(error.localizedDescription)"
-        }
-
-        isLoading = false
+    // MARK: - Guardar saldo leído desde el WebView
+    func saveBalance(_ balance: Double, for card: SAETACard) {
+        var updatedCard = card
+        updatedCard.balance = balance
+        updatedCard.lastUpdated = Date()
+        storageService.upsert(card: updatedCard, in: &cards)
+        cardPendingWebBalance = nil
+        successMessage = "Saldo actualizado: \(updatedCard.formattedBalance)"
     }
 
     // MARK: - Actualizar saldo de todas las tarjetas
     func refreshAllBalances() async {
-        isLoading = true
-        errorMessage = nil
-        var errorCount = 0
-
-        for card in cards {
-            do {
-                let result = try await balanceService.fetchBalance(for: card.cardNumber)
-                var updatedCard = card
-                updatedCard.balance = result.balance
-                updatedCard.lastUpdated = result.queryDate
-                storageService.upsert(card: updatedCard, in: &cards)
-            } catch {
-                errorCount += 1
-            }
-        }
-
-        isLoading = false
-
-        if errorCount > 0 {
-            errorMessage = "\(errorCount) tarjeta(s) no pudieron actualizarse. Verificá tu conexión a internet."
-        } else if !cards.isEmpty {
-            successMessage = "Todos los saldos actualizados"
-        }
+        // Para todas las tarjetas: pedir al usuario que consulte cada una
+        // individualmente desde el detalle (el portal requiere acción humana para el captcha)
+        if cards.isEmpty { return }
+        successMessage = "Consultá el saldo de cada tarjeta en su pantalla de detalle."
     }
 
     // MARK: - URL para consulta web manual
     func webPortalURL(for card: SAETACard) -> URL? {
-        return URL(string: "https://salta.miredbus.com.ar/#/tarjetas")
+        return URL(string: BalanceService.portalURL)
     }
 }

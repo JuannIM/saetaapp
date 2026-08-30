@@ -216,7 +216,7 @@ struct TotalBalanceHeaderView: View {
 struct CardRowView: View {
     let card: SAETACard
     @EnvironmentObject var viewModel: CardListViewModel
-    @State private var isRefreshing = false
+
 
     var body: some View {
         ZStack {
@@ -281,16 +281,12 @@ struct CardRowView: View {
                     // Botón de actualizar
                     Button {
                         Task {
-                            isRefreshing = true
                             await viewModel.refreshBalance(for: card)
-                            isRefreshing = false
                         }
                     } label: {
                         Image(systemName: "arrow.clockwise.circle.fill")
                             .font(.title2)
                             .foregroundColor(.white.opacity(0.9))
-                            .rotationEffect(.degrees(isRefreshing ? 360 : 0))
-                            .animation(isRefreshing ? .linear(duration: 1).repeatForever(autoreverses: false) : .default, value: isRefreshing)
                     }
                 }
                 .padding(.horizontal, 20)

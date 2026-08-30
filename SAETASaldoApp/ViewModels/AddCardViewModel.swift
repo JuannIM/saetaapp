@@ -96,27 +96,17 @@ class AddCardViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
 
-        // Intentar obtener el saldo inicial
-        var initialBalance: Double? = nil
-        var initialDate: Date? = nil
-
-        do {
-            let result = try await balanceService.fetchBalance(for: cleanNumber)
-            initialBalance = result.balance
-            initialDate = result.queryDate
-        } catch SAETAError.captchaRequired {
-            showCaptchaAlert = true
-        } catch {
-            // Si falla la consulta inicial, igual agregar la tarjeta sin saldo
-        }
+        // No intentamos consultar el saldo al agregar la tarjeta:
+        // el portal requiere acción humana (captcha) y el endpoint REST no existe.
+        // El usuario puede consultar el saldo desde la pantalla de detalle.
 
         let newCard = SAETACard(
             cardNumber: cleanNumber,
             nfcUID: nfcUID,
             alias: finalAlias,
             type: selectedType,
-            balance: initialBalance,
-            lastUpdated: initialDate,
+            balance: nil,
+            lastUpdated: nil,
             isNominated: isNominated
         )
 
