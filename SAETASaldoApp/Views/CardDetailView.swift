@@ -69,21 +69,11 @@ struct CardDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         // WebView integrado: se abre automáticamente al tocar "Actualizar Saldo"
         .sheet(isPresented: showingWebView) {
-            NavigationView {
-                SAETAWebView(cardNumber: currentCard.cardNumber) { balance in
-                    // El JS detectó el saldo → guardar y cerrar
-                    viewModel.saveBalance(balance, for: currentCard)
-                }
-                .navigationTitle("Consultar Saldo SAETA")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button("Cerrar") {
-                            viewModel.cardPendingWebBalance = nil
-                        }
-                    }
-                }
-            }
+            BalanceWebSheet(
+                card: currentCard,
+                onClose: { viewModel.cardPendingWebBalance = nil },
+                onBalanceFound: { balance in viewModel.saveBalance(balance, for: currentCard) }
+            )
         }
 
         .toolbar {
