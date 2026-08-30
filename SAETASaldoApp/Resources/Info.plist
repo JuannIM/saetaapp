@@ -47,26 +47,48 @@
 	<!-- Permitir conexión al portal SAETA (HTTP y HTTPS) -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<!-- Configuración de excepciones para el portal SAETA que puede usar HTTP -->
+		<!-- Permite cargar HTTP en WKWebView (necesario para el captcha del portal SAETA) -->
+		<key>NSAllowsArbitraryLoadsInWebContent</key>
+		<true/>
+		<!-- Permite HTTP en conexiones de red nativas (URLSession) -->
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+		<!-- Configuración específica por dominio -->
 		<key>NSExceptionDomains</key>
 		<dict>
 			<key>salta.miredbus.com.ar</key>
 			<dict>
+				<!-- Permite HTTP además de HTTPS para este dominio -->
 				<key>NSExceptionAllowsInsecureHTTPLoads</key>
-				<false/>
+				<true/>
 				<key>NSExceptionMinimumTLSVersion</key>
-				<string>TLSv1.2</string>
+				<string>TLSv1.0</string>
 				<key>NSIncludesSubdomains</key>
 				<true/>
+				<key>NSExceptionRequiresForwardSecrecy</key>
+				<false/>
+			</dict>
+			<key>miredbus.com.ar</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSExceptionMinimumTLSVersion</key>
+				<string>TLSv1.0</string>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+				<key>NSExceptionRequiresForwardSecrecy</key>
+				<false/>
 			</dict>
 			<key>saetasalta.com.ar</key>
 			<dict>
 				<key>NSExceptionAllowsInsecureHTTPLoads</key>
-				<false/>
+				<true/>
 				<key>NSExceptionMinimumTLSVersion</key>
-				<string>TLSv1.2</string>
+				<string>TLSv1.0</string>
 				<key>NSIncludesSubdomains</key>
 				<true/>
+				<key>NSExceptionRequiresForwardSecrecy</key>
+				<false/>
 			</dict>
 		</dict>
 	</dict>
