@@ -17,7 +17,15 @@ struct ContentView: View {
                 Label("Mis Tarjetas", systemImage: "creditcard.fill")
             }
 
-            // Tab 2: Escanear
+            // Tab 2: Colectivos en Vivo
+            NavigationStack {
+                BusTrackerView()
+            }
+            .tabItem {
+                Label("Colectivos", systemImage: "bus.fill")
+            }
+
+            // Tab 3: Escanear
             NavigationStack {
                 NFCScanView()
                     .environmentObject(viewModel)

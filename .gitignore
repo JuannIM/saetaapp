@@ -1,0 +1,7 @@
+.DS_Store
+*.zip
+logs/
+logs2/
+build/
+DerivedData/
+*.xcresult

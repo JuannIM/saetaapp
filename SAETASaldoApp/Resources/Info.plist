@@ -43,6 +43,10 @@
 		<string>TAG</string>
 	</array>
 
+	<!-- PERMISOS DE UBICACIÓN -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>SAETA Saldo usa tu ubicación para mostrarte las paradas y colectivos más cercanos a donde estás.</string>
+
 	<!-- PERMISOS DE RED -->
 	<!-- Permitir conexión al portal SAETA (HTTP y HTTPS) -->
 	<key>NSAppTransportSecurity</key>
