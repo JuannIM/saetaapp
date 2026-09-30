@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">SAETA Saldo</string>
+    <string name="nfc_prompt_title">Acercá tu tarjeta SAETA</string>
+    <string name="nfc_prompt_desc">Mantené la tarjeta apoyada en la parte trasera del teléfono.</string>
+</resources>
