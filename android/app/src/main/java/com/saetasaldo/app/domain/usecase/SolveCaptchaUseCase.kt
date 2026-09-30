@@ -18,17 +18,24 @@ class SolveCaptchaUseCase(
             try {
                 val response = apiService.getCaptchaImage()
                 val body = response.body()
-                if (response.isSuccessful && body != null) {
-                    val bytes = body.bytes()
-                    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                    if (bitmap != null) {
-                        val code = solver.solve(bitmap)
-                        if (CaptchaPreprocessor.isLikelyValid(code)) {
-                            return@withContext Result.success(code)
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    if (body != null) {
+                        val bytes = body.bytes()
+                        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                        if (bitmap != null) {
+                            val code = solver.solve(bitmap)
+                            if (CaptchaPreprocessor.isLikelyValid(code)) {
+                                return@withContext Result.success(code)
+                            }
+                            lastAttemptCode = code
                         }
-                        lastAttemptCode = code
                     }
+                } else {
+                    response.errorBody()?.close()
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 // Continue retry loop
             }

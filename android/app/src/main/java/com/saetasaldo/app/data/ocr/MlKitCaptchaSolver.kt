@@ -13,10 +13,11 @@ import kotlin.coroutines.resumeWithException
 
 open class MlKitCaptchaSolver(
     private val recognizer: TextRecognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
-) {
+) : AutoCloseable {
     open suspend fun solve(bitmap: Bitmap): String = withContext(Dispatchers.Default) {
-        val preprocessed = CaptchaPreprocessor.binarize(bitmap)
-        val image = InputImage.fromBitmap(preprocessed, 0)
+        val binarized = CaptchaPreprocessor.binarize(bitmap)
+        val scaled = CaptchaPreprocessor.scale2x(binarized)
+        val image = InputImage.fromBitmap(scaled, 0)
 
         suspendCancellableCoroutine { continuation ->
             recognizer.process(image)
@@ -28,5 +29,9 @@ open class MlKitCaptchaSolver(
                     continuation.resumeWithException(exception)
                 }
         }
+    }
+
+    override fun close() {
+        recognizer.close()
     }
 }
