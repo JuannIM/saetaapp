@@ -8,7 +8,7 @@ import kotlin.math.max
 class CalculateRemainingTripsUseCase {
 
     operator fun invoke(balance: Double, fare: Double, cardType: CardType): TripEstimate {
-        val safeFare = if (fare <= 0.0) 690.0 else fare
+        val safeFare = if (fare <= 0.0 || fare.isNaN()) 690.0 else fare
         val isInNegative = balance < 0.0
 
         val regularTrips = if (balance > 0.0) {
@@ -29,7 +29,7 @@ class CalculateRemainingTripsUseCase {
             if (balance >= 0.0) {
                 emergencyAllowance
             } else {
-                val debtTrips = floor(-balance / safeFare).toInt()
+                val debtTrips = kotlin.math.ceil(-balance / safeFare).toInt()
                 max(0, emergencyAllowance - debtTrips)
             }
         } else {
