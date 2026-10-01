@@ -20,8 +20,12 @@ data class SaldoResponseDto(
 )
 
 data class SaldoItemDto(
+    @SerializedName("value")
+    val value: Double? = null,
     @SerializedName("monto")
-    val amount: Double,
+    val monto: Double? = null,
     @SerializedName("fecha")
     val date: String? = null
-)
+) {
+    val amount: Double get() = value ?: monto ?: 0.0
+}
