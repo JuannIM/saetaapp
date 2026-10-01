@@ -435,16 +435,16 @@ private fun TripEstimatorSection(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text(
-                        text = "${estimate.regularTrips} comunes",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    if (cardType == CardType.AZUL_COMUN && estimate.emergencyTrips > 0) {
+                if (estimate.emergencyTrips > 0) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text(
+                            text = "${estimate.regularTrips} con saldo",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                         Text(
                             text = "+ ${estimate.emergencyTrips} emergencia",
                             style = MaterialTheme.typography.bodyMedium,

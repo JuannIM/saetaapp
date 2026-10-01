@@ -9,7 +9,11 @@ enum class CardType(val displayName: String) {
             if (raw == null) return AZUL_COMUN
             val upper = raw.uppercase()
             return when {
-                upper.contains("VERDE") || upper.contains("BENEFICIARIO") || upper.contains("ESTUDIANTIL") || upper.contains("JUBILADO") -> VERDE_BENEFICIARIO
+                upper.contains("VERDE") ||
+                upper.contains("BENEFICIARIO") ||
+                upper.contains("ESTUDIANTIL") ||
+                upper.contains("JUBILADO") ||
+                upper.contains("ABONO") -> VERDE_BENEFICIARIO
                 else -> AZUL_COMUN
             }
         }

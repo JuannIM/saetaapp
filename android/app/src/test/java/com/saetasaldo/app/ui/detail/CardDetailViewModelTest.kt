@@ -84,12 +84,12 @@ class CardDetailViewModelTest {
         backgroundScope.launch { viewModel.tripEstimate.collect() }
         advanceUntilIdle()
 
-        // Balance 2070.0, fare 1450.0 -> 1 regular + 2 emergency = 3 total
+        // Balance 2070.0, fare 1450.0 -> 1 regular trip, 0 emergency = 1 total
         val estimate = viewModel.tripEstimate.value
         assertNotNull(estimate)
         assertEquals(1, estimate?.regularTrips)
-        assertEquals(2, estimate?.emergencyTrips)
-        assertEquals(3, estimate?.totalPossibleTrips)
+        assertEquals(0, estimate?.emergencyTrips)
+        assertEquals(1, estimate?.totalPossibleTrips)
     }
 
     @Test

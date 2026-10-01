@@ -23,23 +23,14 @@ class CalculateRemainingTripsUseCase {
             0.0
         }
 
-        val emergencyAllowance = if (cardType == CardType.AZUL_COMUN) 2 else 0
-
-        val emergencyTrips = if (cardType == CardType.AZUL_COMUN) {
-            if (balance >= 0.0) {
-                emergencyAllowance
-            } else {
-                val debtTrips = kotlin.math.ceil(-balance / safeFare).toInt()
-                max(0, emergencyAllowance - debtTrips)
-            }
-        } else {
-            0
-        }
+        // Option 1: Calculate trips strictly based on available balance.
+        // Standard non-nominated SAETA cards have 0 emergency trips allowance.
+        val emergencyTrips = 0
 
         return TripEstimate(
             regularTrips = regularTrips,
             emergencyTrips = emergencyTrips,
-            totalPossibleTrips = regularTrips + emergencyTrips,
+            totalPossibleTrips = regularTrips,
             remainingSubBalance = remainingSubBalance,
             isInEmergencyNegative = isInNegative
         )
