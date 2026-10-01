@@ -37,7 +37,7 @@ class CardDetailViewModel(
     val history: StateFlow<List<BalanceRecord>> = repository.getHistoryForCard(cardId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _fare = MutableStateFlow(690.0)
+    private val _fare = MutableStateFlow(1450.0)
     val fare: StateFlow<Double> = _fare.asStateFlow()
 
     val tripEstimate: StateFlow<TripEstimate?> = combine(card, fare) { currentCard, currentFare ->

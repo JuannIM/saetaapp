@@ -70,7 +70,7 @@ class CardRepositoryImpl(
 
             when (body.error) {
                 0 -> {
-                    val amount = body.balances?.firstOrNull()?.amount ?: 0.0
+                    val amount = body.balances?.firstOrNull()?.amount ?: body.effectiveBalance
                     val state = body.cardState ?: "ACTIVA"
 
                     // Find existing card by number or create stub
