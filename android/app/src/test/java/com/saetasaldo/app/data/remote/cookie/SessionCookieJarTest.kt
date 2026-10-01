@@ -38,4 +38,29 @@ class SessionCookieJarTest {
         cookieJar.clear()
         assertTrue(cookieJar.loadForRequest(url).isEmpty())
     }
+
+    @Test
+    fun `expired cookies are not returned and get pruned`() {
+        val expiredCookie = Cookie.Builder()
+            .name("EXPIRED_TOKEN")
+            .value("OLD")
+            .domain("salta.miredbus.com.ar")
+            .expiresAt(System.currentTimeMillis() - 10000)
+            .build()
+        cookieJar.saveFromResponse(url, listOf(expiredCookie))
+        assertTrue(cookieJar.loadForRequest(url).isEmpty())
+    }
+
+    @Test
+    fun `cookies for different path are not returned`() {
+        val pathCookie = Cookie.Builder()
+            .name("PATH_SPECIFIC")
+            .value("SECRET")
+            .domain("salta.miredbus.com.ar")
+            .path("/admin")
+            .build()
+        cookieJar.saveFromResponse(url, listOf(pathCookie))
+        val loaded = cookieJar.loadForRequest("https://salta.miredbus.com.ar/captcha.png".toHttpUrl())
+        assertTrue(loaded.none { it.name == "PATH_SPECIFIC" })
+    }
 }

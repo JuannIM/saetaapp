@@ -14,7 +14,7 @@ object NetworkClient {
     val cookieJar = SessionCookieJar()
 
     val okHttpClient: OkHttpClient by lazy {
-        OkHttpClient.Builder()
+        val builder = OkHttpClient.Builder()
             .cookieJar(cookieJar)
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
@@ -24,12 +24,16 @@ object NetworkClient {
                     .build()
                 chain.proceed(request)
             }
-            .addInterceptor(
+
+        if (BuildConfig.DEBUG) {
+            builder.addInterceptor(
                 HttpLoggingInterceptor().apply {
                     level = HttpLoggingInterceptor.Level.BASIC
                 }
             )
-            .build()
+        }
+
+        builder.build()
     }
 
     val apiService: SaetaApiService by lazy {

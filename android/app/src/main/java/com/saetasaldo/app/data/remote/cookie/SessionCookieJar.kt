@@ -11,14 +11,32 @@ class SessionCookieJar : CookieJar {
     override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
         val host = url.host
         val hostCookies = cookieStore.getOrPut(host) { ConcurrentHashMap() }
+        val now = System.currentTimeMillis()
         for (cookie in cookies) {
-            hostCookies[cookie.name] = cookie
+            if (cookie.expiresAt <= now) {
+                hostCookies.remove(cookie.name)
+            } else {
+                hostCookies[cookie.name] = cookie
+            }
         }
     }
 
     override fun loadForRequest(url: HttpUrl): List<Cookie> {
         val hostCookies = cookieStore[url.host] ?: return emptyList()
-        return hostCookies.values.toList()
+        val now = System.currentTimeMillis()
+        val validCookies = mutableListOf<Cookie>()
+
+        val iterator = hostCookies.entries.iterator()
+        while (iterator.hasNext()) {
+            val entry = iterator.next()
+            val cookie = entry.value
+            if (cookie.expiresAt <= now) {
+                iterator.remove()
+            } else if (cookie.matches(url)) {
+                validCookies.add(cookie)
+            }
+        }
+        return validCookies
     }
 
     fun clear() {

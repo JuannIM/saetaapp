@@ -17,14 +17,16 @@ class RefreshBalanceAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         withContext(Dispatchers.IO) {
             val db = SaetaDatabase.getInstance(context)
-            val solveCaptchaUseCase = SolveCaptchaUseCase(NetworkClient.apiService, MlKitCaptchaSolver())
-            val repo = CardRepositoryImpl(db.cardDao(), db.balanceHistoryDao(), NetworkClient.apiService, solveCaptchaUseCase)
-            val getCardBalanceUseCase = GetCardBalanceUseCase(repo)
+            MlKitCaptchaSolver().use { solver ->
+                val solveCaptchaUseCase = SolveCaptchaUseCase(NetworkClient.apiService, solver)
+                val repo = CardRepositoryImpl(db.cardDao(), db.balanceHistoryDao(), NetworkClient.apiService, solveCaptchaUseCase)
+                val getCardBalanceUseCase = GetCardBalanceUseCase(repo)
 
-            val favorite = repo.getFavoriteCard() ?: return@withContext
-            getCardBalanceUseCase(favorite.cardNumber)
+                val favorite = repo.getFavoriteCard() ?: return@use
+                getCardBalanceUseCase(favorite.cardNumber)
 
-            SaetaBalanceWidget().update(context, glanceId)
+                SaetaBalanceWidget().update(context, glanceId)
+            }
         }
     }
 }

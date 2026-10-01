@@ -34,7 +34,10 @@ class CardsViewModel(
             _errorMessage.value = null
             try {
                 val currentCards = cards.value
-                for (card in currentCards) {
+                for ((index, card) in currentCards.withIndex()) {
+                    if (index > 0) {
+                        kotlinx.coroutines.delay(800) // Polite pacing to prevent bot-flagging
+                    }
                     val result = getCardBalanceUseCase(card.cardNumber)
                     if (result.isFailure) {
                         _errorMessage.value = result.exceptionOrNull()?.localizedMessage

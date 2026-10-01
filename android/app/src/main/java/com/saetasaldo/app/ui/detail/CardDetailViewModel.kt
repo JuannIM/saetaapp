@@ -83,6 +83,8 @@ class CardDetailViewModel(
                     response.body()?.byteStream()?.use { stream ->
                         _captchaBitmap.value = BitmapFactory.decodeStream(stream)
                     }
+                } else {
+                    response.errorBody()?.close()
                 }
             } catch (_: Exception) {}
         }

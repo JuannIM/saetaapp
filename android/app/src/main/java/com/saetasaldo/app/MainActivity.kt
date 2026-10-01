@@ -78,6 +78,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var cardsViewModel: CardsViewModel
 
     private val scannedTagFlow = MutableSharedFlow<String>(replay = 1, extraBufferCapacity = 1)
+    private var captchaSolver: MlKitCaptchaSolver? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -85,7 +86,7 @@ class MainActivity : ComponentActivity() {
         nfcManager = AndroidNfcManager(this)
 
         val db = SaetaDatabase.getInstance(this)
-        val solver = MlKitCaptchaSolver()
+        val solver = MlKitCaptchaSolver().also { captchaSolver = it }
         val solveCaptchaUseCase = SolveCaptchaUseCase(NetworkClient.apiService, solver)
         repository = CardRepositoryImpl(db.cardDao(), db.balanceHistoryDao(), NetworkClient.apiService, solveCaptchaUseCase)
 
@@ -121,6 +122,11 @@ class MainActivity : ComponentActivity() {
     override fun onPause() {
         super.onPause()
         nfcManager.disableForegroundDispatch(this)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        captchaSolver?.close()
     }
 
     override fun onNewIntent(intent: Intent) {
