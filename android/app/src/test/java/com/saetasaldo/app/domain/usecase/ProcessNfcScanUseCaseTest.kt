@@ -61,4 +61,22 @@ class ProcessNfcScanUseCaseTest {
         assertEquals(card, (result as NfcScanResult.ExistingCardFound).card)
         coVerify(exactly = 1) { repository.getCardByNfcUid("04A1B2C3") }
     }
+
+    @Test
+    fun `normalizes lowercase and whitespace in nfcUid string`() = runBlocking {
+        val card = SaetaCard(
+            id = "card-3",
+            name = "Test Card",
+            cardNumber = "112233",
+            nfcUid = "04A1B2C3",
+            currentBalance = 100.0
+        )
+        coEvery { repository.getCardByNfcUid("04A1B2C3") } returns card
+
+        val result = useCase("  04a1b2c3  ")
+
+        assertTrue(result is NfcScanResult.ExistingCardFound)
+        assertEquals(card, (result as NfcScanResult.ExistingCardFound).card)
+        coVerify(exactly = 1) { repository.getCardByNfcUid("04A1B2C3") }
+    }
 }

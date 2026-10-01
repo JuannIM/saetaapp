@@ -12,11 +12,12 @@ class ProcessNfcScanUseCase(
     private val repository: CardRepository
 ) {
     suspend operator fun invoke(nfcUid: String): NfcScanResult {
-        val existing = repository.getCardByNfcUid(nfcUid)
+        val normalizedUid = nfcUid.trim().uppercase()
+        val existing = repository.getCardByNfcUid(normalizedUid)
         return if (existing != null) {
             NfcScanResult.ExistingCardFound(existing)
         } else {
-            NfcScanResult.NewCardDiscovered(nfcUid)
+            NfcScanResult.NewCardDiscovered(normalizedUid)
         }
     }
 

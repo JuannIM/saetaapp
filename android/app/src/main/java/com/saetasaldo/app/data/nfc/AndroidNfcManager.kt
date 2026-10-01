@@ -21,24 +21,30 @@ open class AndroidNfcManager(
 
     fun enableForegroundDispatch(activity: Activity) {
         val adapter = nfcAdapter ?: return
-        if (!adapter.isEnabled) return
+        if (!adapter.isEnabled || activity.isFinishing) return
 
         val intent = Intent(activity, activity.javaClass).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        val baseFlags = PendingIntent.FLAG_UPDATE_CURRENT
         val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            PendingIntent.FLAG_MUTABLE
+            baseFlags or PendingIntent.FLAG_MUTABLE
         } else {
-            0
+            baseFlags
         }
         val pendingIntent = PendingIntent.getActivity(activity, 0, intent, flags)
 
         val techFilter = IntentFilter(NfcAdapter.ACTION_TECH_DISCOVERED)
         val tagFilter = IntentFilter(NfcAdapter.ACTION_TAG_DISCOVERED)
 
-        adapter.enableForegroundDispatch(activity, pendingIntent, arrayOf(techFilter, tagFilter), null)
+        runCatching {
+            adapter.enableForegroundDispatch(activity, pendingIntent, arrayOf(techFilter, tagFilter), null)
+        }
     }
 
     fun disableForegroundDispatch(activity: Activity) {
-        nfcAdapter?.disableForegroundDispatch(activity)
+        if (nfcAdapter?.isEnabled != true) return
+        runCatching {
+            nfcAdapter?.disableForegroundDispatch(activity)
+        }
     }
 
     @Suppress("DEPRECATION")
@@ -63,7 +69,7 @@ open class AndroidNfcManager(
         }
 
         fun extractUidFromTag(tag: Tag): String {
-            return bytesToHex(tag.id)
+            return tag.id?.let { bytesToHex(it) }.orEmpty()
         }
     }
 }
