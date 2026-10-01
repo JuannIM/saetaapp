@@ -1,171 +1,142 @@
-# SAETA Saldo - App iOS para tarjetas SAETA Salta
+# SAETA Saldo - Apps para tarjetas SAETA Salta (iOS & Android)
 
-App para iOS que permite consultar el saldo de las tarjetas de transporte público **SAETA** (Salta, Argentina) usando tecnología **NFC**.
-
-## ¿Qué es SAETA?
-
-**SAETA** (Sociedad Anónima de Transporte Automotor) es la empresa de transporte público urbano e interurbano de la ciudad de Salta y el Gran Salta, Argentina. Utiliza tarjetas sin contacto (NFC/MIFARE) para el pago de pasajes.
-
-### Tipos de tarjetas SAETA
-
-| Tarjeta | Destinatarios | Beneficios |
-|---------|--------------|------------|
-| **Azul** | Público general | Transbordo universal (60 min), saldo de emergencia (2 boletos si está nominada) |
-| **Verde** | Jubilados, pensionados, estudiantes, discapacitados | Tarifa diferencial o gratuidad |
+Aplicaciones nativas para consultar el saldo de las tarjetas de transporte público **SAETA** (Salta, Argentina) utilizando tecnología sin contacto **NFC**.
 
 ---
 
-## Cómo funciona la App
+## 🚀 Versión Android Nativa (Superando las Restricciones de iOS)
 
-### 1. Lectura NFC
-La app usa **CoreNFC** para leer el **UID (identificador único)** del chip de la tarjeta SAETA al acercarla al iPhone. Este UID permite identificar la tarjeta en futuras consultas sin necesidad de ingresar el número manualmente.
+La versión para Android (`android/`) fue diseñada e implementada desde cero con **Kotlin 2.x** y **Jetpack Compose**, superando por completo las limitaciones de iOS (modales invasivos de CoreNFC, requisito de cuenta paga Apple Developer de $99/año, bloqueos SSL de ATS, y falta de widgets interactivos con sincronización en background).
 
-> **Nota técnica:** iOS no puede leer el saldo directamente del chip (está encriptado y protegido con claves que solo SAETA tiene). El saldo se consulta vía el portal web oficial.
+### 🌟 Capacidades Clave de la Versión Android
 
-### 2. Consulta de Saldo
-El saldo se obtiene del **portal oficial de SAETA** (`salta.miredbus.com.ar`) operado por **RedBus/Bizland**. 
-
-⚠️ **Importante:** Los datos en el portal se actualizan cada **24-48 horas hábiles** y corresponden al último uso de la tarjeta en el colectivo.
-
-### 3. Almacenamiento local
-Las tarjetas se guardan localmente en el dispositivo usando `UserDefaults` (sin servidores externos, sin datos personales).
-
----
-
-## Estructura del Proyecto
-
-```
-SAETASaldoApp/
-├── SAETASaldoApp.swift          ← Punto de entrada (@main)
-├── Models/
-│   └── CardModel.swift          ← SAETACard, CardType, SAETAError
-├── Services/
-│   ├── NFCService.swift         ← CoreNFC: leer UID de tarjetas
-│   ├── BalanceService.swift     ← Consulta saldo portal SAETA
-│   └── CardStorageService.swift ← Persistencia local
-├── ViewModels/
-│   ├── CardListViewModel.swift  ← Gestión lista de tarjetas
-│   └── AddCardViewModel.swift   ← Lógica agregar tarjeta
-├── Views/
-│   ├── ContentView.swift        ← TabView raíz
-│   ├── CardListView.swift       ← Tab: Mis Tarjetas
-│   ├── CardDetailView.swift     ← Detalle de tarjeta individual
-│   ├── AddCardView.swift        ← Formulario + NFC scan
-│   ├── NFCScanView.swift        ← Tab: Escanear con NFC
-│   └── InfoView.swift           ← Tab: Info SAETA
-├── Utilities/
-│   └── SAETAColors.swift        ← Paleta de colores SAETA
-└── Resources/
-    ├── Info.plist               ← Permisos NFC y configuración
-    └── SAETASaldoApp.entitlements ← Entitlement NFC
-```
+| Característica | Versión iOS | Versión Android |
+|---|---|---|
+| **Lectura NFC** | Requiere modal invasivo del sistema iOS (`CoreNFC`), sesión explícita y cuenta paga Apple de $99/año | **Nativo y transparente**: Foreground Dispatch (`NfcAdapter`) con respuesta háptica instantánea y filtros en background (`ACTION_TECH_DISCOVERED`) sin modales ni costo. |
+| **Resolución de Captcha** | Scraping manual / Redirige a Safari al fallar | **On-Device OCR con Google ML Kit**: Descarga `/captcha.png`, binariza la imagen y resuelve el código alfanumérico en ~50ms sin enviar datos a servidores externos, con 3 reintentos silenciosos y diálogo de fallback manual. |
+| **Widget de Escritorio** | No disponible (limitado por sandbox de iOS) | **Jetpack Glance Widget**: Muestra el saldo actualizado directamente en la pantalla de inicio con botón de refresco de 1 toque. |
+| **Conectividad con RedBus** | Bloqueos por App Transport Security (ATS) ante certificados del portal | **Network Security Config**: Configuración segura de certificados para `salta.miredbus.com.ar` y sesión `JSESSIONID` retenida en memoria. |
+| **Persistencia y Métricas** | `UserDefaults` simple (solo último valor) | **Room Database**: Historial completo de variaciones de saldo, estimación inteligente de viajes restantes (regulares + 2 boletos de emergencia) y editor de tarifa. |
 
 ---
 
-## Requisitos Técnicos
+## 🏛️ Arquitectura del Proyecto Android (`android/`)
 
-| Requisito | Detalle |
-|-----------|---------|
-| **iOS mínimo** | iOS 15.0 |
-| **Xcode** | 15.0 o superior |
-| **Swift** | 5.9+ |
-| **NFC compatible** | iPhone 7 o superior |
-| **Apple Developer** | Cuenta paga ($99/año) para NFC en dispositivo físico |
+El proyecto Android sigue los principios de **Clean Architecture** y **Jetpack Recommended App Architecture**:
 
-### Frameworks utilizados (todos nativos de iOS)
-- **CoreNFC** — Lectura de tags NFC (`NFCTagReaderSession`)
-- **SwiftUI** — Interfaz de usuario
-- **Foundation** — Networking, JSON, UserDefaults
-- **Combine** — Programación reactiva (ObservableObject)
-
----
-
-## Configuración en Xcode
-
-### 1. Crear el proyecto
 ```
-File → New → Project → iOS → App
-Product Name: SAETASaldoApp
-Bundle ID: com.saetasaldo.app
-Interface: SwiftUI | Language: Swift | Min iOS: 15.0
-```
-
-### 2. Habilitar NFC
-```
-Target → Signing & Capabilities → + Capability
-→ "Near Field Communication Tag Reading"
-```
-
-### 3. Info.plist (campos requeridos)
-```xml
-<!-- Descripción requerida por Apple -->
-<key>NFCReaderUsageDescription</key>
-<string>SAETA Saldo usa NFC para identificar tu tarjeta...</string>
-
-<!-- Habilitar lectura de tags físicos -->
-<key>com.apple.developer.nfc.readersession.formats</key>
-<array>
-    <string>TAG</string>
-</array>
-```
-
-### 4. Entitlements (generado automáticamente por Xcode)
-```xml
-<key>com.apple.developer.nfc.readersession.formats</key>
-<array>
-    <string>TAG</string>
-</array>
+android/
+├── app/
+│   ├── src/main/
+│   │   ├── AndroidManifest.xml                  # Tech filters NFC, permisos, widget provider
+│   │   ├── res/
+│   │   │   ├── xml/network_security_config.xml  # Configuración SSL y dominios confiables
+│   │   │   ├── xml/nfc_tech_filter.xml          # Filtros NfcA, MifareClassic, IsoDep
+│   │   │   └── xml/saeta_widget_info.xml        # Metadata del Widget Jetpack Glance
+│   │   └── java/com/saetasaldo/app/
+│   │       ├── MainActivity.kt                  # Single-Activity Compose host y despacho NFC
+│   │       ├── domain/                          # Modelos de negocio y Casos de Uso puros
+│   │       │   ├── model/                       # SaetaCard, CardType, BalanceRecord, TripEstimate
+│   │       │   ├── repository/                  # CardRepository (interfaz)
+│   │       │   └── usecase/
+│   │       │       ├── CalculateRemainingTripsUseCase.kt
+│   │       │       ├── GetCardBalanceUseCase.kt
+│   │       │       ├── ProcessNfcScanUseCase.kt
+│   │       │       └── SolveCaptchaUseCase.kt
+│   │       ├── data/                            # Implementación de datos y proveedores
+│   │       │   ├── local/                       # Room DB: SaetaDatabase, DAOs, Entities, Converters
+│   │       │   ├── remote/                      # Retrofit + OkHttp: SaetaApiService, SessionCookieJar
+│   │       │   ├── ocr/                         # Google ML Kit OCR & Preprocesador Binarizador
+│   │       │   ├── nfc/                         # AndroidNfcManager (Foreground & Background dispatch)
+│   │       │   └── repository/                  # CardRepositoryImpl (orquestación y sincronización)
+│   │       ├── ui/                              # Capa de presentación Jetpack Compose
+│   │       │   ├── theme/                       # Material 3 tokens: Color (Azul/Verde SAETA, Oro), Theme
+│   │       │   ├── cards/                       # CardsScreen, CardsViewModel, SaetaCardItem
+│   │       │   ├── detail/                      # CardDetailScreen, CardDetailViewModel
+│   │       │   ├── nfc/                         # NfcScanBottomSheet (onda radar animada)
+│   │       │   └── dialogs/                     # FallbackCaptchaDialog (ingreso manual en contingencia)
+│   │       └── widget/                          # Jetpack Glance Home Widget
+│   │           ├── SaetaBalanceWidget.kt        # UI interactiva en Glance
+│   │           ├── SaetaBalanceWidgetReceiver.kt# Receptor AppWidgetProvider
+│   │           └── RefreshBalanceAction.kt      # Actualización en background con 1 toque
+│   └── src/test/                                # 54 pruebas unitarias automatizadas
 ```
 
 ---
 
-## Pantallas de la App
+## 🛠️ Tecnologías y Dependencias Principales
 
-### Tab 1: Mis Tarjetas
-- Lista todas las tarjetas guardadas
-- Muestra el saldo con gradiente según tipo (azul/verde)
-- Pull-to-refresh para actualizar todos los saldos
-- Swipe o menú contextual para eliminar
-
-### Tab 2: Escanear
-- Animación de ondas NFC en tiempo real
-- Detecta tarjetas SAETA al acercarlas al iPhone
-- Vincula el UID NFC a tarjetas existentes o crea nuevas
-- Instrucciones paso a paso para el usuario
-
-### Tab 3: Información
-- Información sobre SAETA y tipos de tarjetas
-- Cómo recargar (Mercado Pago, Banco Macro, Naranja X, etc.)
-- Contacto SAETA (teléfono, WhatsApp, CAU)
-- Links directos al portal web y app de Android
+- **Lenguaje:** Kotlin 2.1
+- **UI Toolkit:** Jetpack Compose + Material 3 (BOM 2024.12.01)
+- **Base de Datos:** AndroidX Room 2.6.1 con Coroutine Flow y TypeConverters
+- **Conectividad:** Retrofit 2.11 + OkHttp 4.12 (con retención de cookies `JSESSIONID` y compresión GZIP)
+- **Visión por Computadora (OCR):** Google ML Kit Text Recognition (`com.google.mlkit:text-recognition:16.0.1`)
+- **Widgets de Escritorio:** Jetpack Glance 1.1.1
+- **Testing:** JUnit 4, MockK 1.13.13, Kotlinx Coroutines Test 1.9.0
 
 ---
 
-## Limitaciones Conocidas
+## 🔄 Contrato de API Revertido (RedBus / Bizland)
 
-1. **Saldo desactualizado:** El portal de SAETA actualiza los datos cada 24-48h hábiles. El saldo que muestra la app puede no reflejar el estado real en tiempo real.
+El portal `salta.miredbus.com.ar` no ofrece una API REST pública documentada. Durante la fase de investigación y benchmarking se identificó el endpoint interno utilizado por la plataforma:
 
-2. **Captcha:** El portal SAETA puede solicitar verificación CAPTCHA para consultas automáticas. En ese caso, la app abre el portal web en Safari.
-
-3. **Sin API oficial:** SAETA no tiene una API REST pública. La consulta de saldo depende del scraping del portal web, que puede cambiar en cualquier momento.
-
-4. **NFC solo en dispositivo físico:** El simulador de iOS no soporta NFC. Se requiere iPhone 7 o superior para pruebas.
-
-5. **UID ≠ Número de tarjeta:** No hay documentación pública que relacione el UID del chip con el número impreso en el plástico. El usuario debe ingresar el número manualmente la primera vez.
-
----
-
-## Información de Contacto SAETA
-
-- **Web oficial:** https://www.saetasalta.com.ar
-- **Portal de tarjetas:** https://salta.miredbus.com.ar
-- **Teléfono:** (0387) 423-8118
-- **WhatsApp:** 387-2280901
-- **CAU Principal:** Pellegrini 824, Lunes a viernes 8:00-16:00
-- **CAU Paseo Salta:** Local 2020, 1° Piso
+1. **Obtención del Captcha:**
+   - `GET https://salta.miredbus.com.ar/captcha.png`
+   - Descarga la imagen captcha vinculada a la cookie de sesión `JSESSIONID`.
+2. **Consulta de Saldo Directa (JSON):**
+   - `POST https://salta.miredbus.com.ar/rest/tarjetaInternal/resultadoSaldo`
+   - Headers requeridos: `Content-Type: application/json`, `User-Agent: Mozilla/5.0 ...`
+   - **Regla fundamental:** No enviar el encabezado `X-Use-New-Captcha: true`. Al omitirlo, el backend valida el campo `verificacionCaptcha` contra la imagen servida en `/captcha.png`.
+   - Payload:
+     ```json
+     {
+       "nroExternoTarjeta": "12345678",
+       "verificacionCaptcha": "4B8Y"
+     }
+     ```
+   - Códigos de respuesta: `0 = Éxito`, `1 = Captcha inválido`, `2 = Tarjeta inexistente`.
 
 ---
 
-## Aviso Legal
+## 📱 Pantallas de la Aplicación Android
 
-Esta aplicación es **no oficial** y no está afiliada, respaldada ni patrocinada por SAETA. Los datos se obtienen del portal público de SAETA. La app **no modifica** el saldo de ninguna tarjeta.
+1. **Mis Tarjetas (`CardsScreen`):**
+   - Tarjetas diseñadas como plásticos físicos digitales con gradientes institucionales:
+     - **Azul Común:** Gradiente `#0D47A1` a `#1976D2`.
+     - **Verde Beneficiario (Jubilados / Estudiantes / Pase Libre):** Gradiente `#1B5E20` a `#388E3C`.
+   - Tipografía grande de saldo (`$ 1.500,00`), número impreso y badges de tarjeta favorita y NFC vinculado.
+   - Gesto Pull-to-Refresh para actualización masiva.
+   - Botón de Acción Flotante (FAB) para escanear nueva tarjeta vía NFC.
+
+2. **Detalle de Tarjeta (`CardDetailScreen`):**
+   - Encabezado ampliado con acciones rápidas: fijar como tarjeta del Widget de escritorio y botón de refresco.
+   - **Estimador Inteligente de Viajes:** Calcula cuántos boletos cubre el saldo actual con tarifa configurable (soporta coma y punto decimal: `690,00`), contemplando los 2 boletos de saldo negativo de emergencia para tarjetas azules.
+   - **Historial de Variaciones:** Registro cronológico de variaciones de saldo con badges diferenciales (`+ $...` / `- $...`).
+   - Edición de nombre y eliminación de tarjeta.
+
+3. **Escanear NFC (`NfcScanBottomSheet`):**
+   - Diálogo inferior con animación de radar de ondas concéntricas.
+   - Detección del estado del adaptador NFC del equipo con botón directo a los ajustes del sistema en caso de estar desactivado.
+   - Respuesta con vibración háptica al detectar un chip.
+
+4. **Verificación Manual de Seguridad (`FallbackCaptchaDialog`):**
+   - Diálogo modal de contingencia si el motor OCR local agota sus 3 reintentos silenciosos.
+   - Presenta la imagen del captcha en pantalla con botón para regenerarlo y campo de texto con auto-capitalización.
+
+---
+
+## 🍎 Versión iOS Original (`SAETASaldoApp/`)
+
+La versión para iOS original se encuentra en la raíz del repositorio, construida con **SwiftUI** y **CoreNFC** (`NFCTagReaderSession`).
+
+### Limitaciones conocidas en iOS:
+- Requiere tarjeta de crédito y cuenta paga en **Apple Developer Program ($99 USD/año)** para ejecutar en dispositivos físicos con capacidad NFC.
+- CoreNFC despliega un modal obligatorio del sistema con animación circular que no se puede omitir ni personalizar.
+- No dispone de widgets interactivos de escritorio con refresco en 1 toque sin abrir la app.
+- Bloqueo de certificados autofirmados o intermedios en el portal de RedBus por políticas estrictas de ATS (App Transport Security).
+
+---
+
+## ⚖️ Aviso Legal
+
+Esta aplicación es un proyecto independiente de código abierto, de carácter **no oficial**, y no está respaldada, afiliada ni asociada con SAETA (Sociedad Anónima de Transporte Automotor) ni con Bizland/RedBus. Los datos son consultados en tiempo real desde el portal web público de SAETA. La aplicación **no modifica ni puede modificar** el saldo de las tarjetas físicas.
