@@ -28,4 +28,6 @@ data class SaldoItemDto(
     val date: String? = null
 ) {
     val amount: Double get() = value ?: monto ?: 0.0
+
+    constructor(amount: Double, date: String? = null) : this(value = amount, monto = amount, date = date)
 }
