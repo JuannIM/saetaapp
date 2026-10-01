@@ -64,7 +64,7 @@ class CalculateRemainingTripsUseCaseTest {
 
     @Test
     fun `fallback to default fare when non-positive fare provided`() {
-        val result = useCase(balance = 1380.0, fare = 0.0, cardType = CardType.AZUL_COMUN)
+        val result = useCase(balance = 2900.0, fare = 0.0, cardType = CardType.AZUL_COMUN)
         assertEquals(2, result.regularTrips)
         assertEquals(2, result.emergencyTrips)
         assertEquals(4, result.totalPossibleTrips)
