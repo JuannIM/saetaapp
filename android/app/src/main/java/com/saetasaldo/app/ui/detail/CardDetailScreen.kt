@@ -65,7 +65,9 @@ import com.saetasaldo.app.domain.model.BalanceRecord
 import com.saetasaldo.app.domain.model.CardType
 import com.saetasaldo.app.domain.model.TripEstimate
 import com.saetasaldo.app.ui.cards.components.SaetaCardItem
+import com.saetasaldo.app.ui.dialogs.FallbackCaptchaDialog
 import com.saetasaldo.app.ui.theme.SaetaBluePrimary
+import com.saetasaldo.app.ui.theme.SaetaGold
 import com.saetasaldo.app.ui.theme.SaetaGreenPrimary
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -84,6 +86,8 @@ fun CardDetailScreen(
     val tripEstimate by viewModel.tripEstimate.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
+    val showCaptchaDialog by viewModel.showFallbackCaptchaDialog.collectAsState()
+    val captchaBitmap by viewModel.captchaBitmap.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
     var showRenameDialog by remember { mutableStateOf(false) }
@@ -92,9 +96,25 @@ fun CardDetailScreen(
 
     LaunchedEffect(errorMessage) {
         errorMessage?.let { msg ->
-            snackbarHostState.showSnackbar(msg)
+            val result = snackbarHostState.showSnackbar(
+                message = msg,
+                actionLabel = if (msg.contains("captcha", ignoreCase = true) || msg.contains("reintentos", ignoreCase = true)) "Resolver" else null,
+                duration = androidx.compose.material3.SnackbarDuration.Long
+            )
+            if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
+                viewModel.triggerManualCaptcha()
+            }
             viewModel.clearError()
         }
+    }
+
+    if (showCaptchaDialog) {
+        FallbackCaptchaDialog(
+            captchaBitmap = captchaBitmap,
+            onConfirm = { code -> viewModel.submitManualCaptcha(code) },
+            onDismiss = { viewModel.dismissCaptchaDialog() },
+            onRefreshCaptcha = { viewModel.loadCaptchaBitmap() }
+        )
     }
 
     Scaffold(
@@ -177,7 +197,7 @@ fun CardDetailScreen(
                             Icon(
                                 imageVector = if (currentCard.isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
                                 contentDescription = null,
-                                tint = if (currentCard.isFavorite) Color(0xFFFFB300) else MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = if (currentCard.isFavorite) SaetaGold else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
@@ -338,7 +358,7 @@ fun CardDetailScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        val parsed = fareInput.toDoubleOrNull()
+                        val parsed = fareInput.replace(',', '.').toDoubleOrNull()
                         if (parsed != null && parsed > 0.0) {
                             viewModel.updateFare(parsed)
                         }

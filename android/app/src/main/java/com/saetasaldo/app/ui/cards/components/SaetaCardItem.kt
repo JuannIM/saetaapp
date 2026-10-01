@@ -82,7 +82,7 @@ fun SaetaCardItem(
                             Icon(
                                 imageVector = Icons.Default.Star,
                                 contentDescription = "Favorita",
-                                tint = Color(0xFFFFD700)
+                                tint = com.saetasaldo.app.ui.theme.SaetaGold
                             )
                         }
                         if (card.nfcUid != null) {

@@ -186,4 +186,71 @@ class CardDetailViewModelTest {
 
         coVerify(exactly = 1) { repository.saveCard(match { it.id == "card-1" && it.name == "Nueva Saeta" }) }
     }
+
+    @Test
+    fun `triggerManualCaptcha and dismissCaptchaDialog toggle dialog state`() = runTest {
+        val viewModel = CardDetailViewModel(
+            cardId = "card-1",
+            repository = repository,
+            getCardBalanceUseCase = getCardBalanceUseCase,
+            calculateRemainingTripsUseCase = calculateRemainingTripsUseCase
+        )
+        backgroundScope.launch { viewModel.showFallbackCaptchaDialog.collect() }
+        advanceUntilIdle()
+
+        assertEquals(false, viewModel.showFallbackCaptchaDialog.value)
+
+        viewModel.triggerManualCaptcha()
+        advanceUntilIdle()
+        assertEquals(true, viewModel.showFallbackCaptchaDialog.value)
+
+        viewModel.dismissCaptchaDialog()
+        advanceUntilIdle()
+        assertEquals(false, viewModel.showFallbackCaptchaDialog.value)
+    }
+
+    @Test
+    fun `submitManualCaptcha dismisses dialog and delegates to getCardBalanceUseCase with code`() = runTest {
+        val viewModel = CardDetailViewModel(
+            cardId = "card-1",
+            repository = repository,
+            getCardBalanceUseCase = getCardBalanceUseCase,
+            calculateRemainingTripsUseCase = calculateRemainingTripsUseCase
+        )
+        backgroundScope.launch { viewModel.card.collect() }
+        backgroundScope.launch { viewModel.showFallbackCaptchaDialog.collect() }
+        advanceUntilIdle()
+
+        coEvery { getCardBalanceUseCase("123456", "ABCD") } returns Result.success(testCard)
+
+        viewModel.triggerManualCaptcha()
+        advanceUntilIdle()
+        assertEquals(true, viewModel.showFallbackCaptchaDialog.value)
+
+        viewModel.submitManualCaptcha("ABCD")
+        advanceUntilIdle()
+
+        assertEquals(false, viewModel.showFallbackCaptchaDialog.value)
+        coVerify(exactly = 1) { getCardBalanceUseCase("123456", "ABCD") }
+    }
+
+    @Test
+    fun `refreshBalance triggers fallback captcha dialog when failure contains captcha error`() = runTest {
+        val viewModel = CardDetailViewModel(
+            cardId = "card-1",
+            repository = repository,
+            getCardBalanceUseCase = getCardBalanceUseCase,
+            calculateRemainingTripsUseCase = calculateRemainingTripsUseCase
+        )
+        backgroundScope.launch { viewModel.card.collect() }
+        backgroundScope.launch { viewModel.showFallbackCaptchaDialog.collect() }
+        advanceUntilIdle()
+
+        coEvery { getCardBalanceUseCase("123456", null) } returns Result.failure(Exception("Error de captcha tras varios intentos"))
+
+        viewModel.refreshBalance()
+        advanceUntilIdle()
+
+        assertEquals(true, viewModel.showFallbackCaptchaDialog.value)
+    }
 }

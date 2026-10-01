@@ -77,7 +77,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var getCardBalanceUseCase: GetCardBalanceUseCase
     private lateinit var cardsViewModel: CardsViewModel
 
-    private val scannedTagFlow = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    private val scannedTagFlow = MutableSharedFlow<String>(replay = 1, extraBufferCapacity = 1)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -99,6 +99,7 @@ class MainActivity : ComponentActivity() {
                     SaetaAppContent(
                         cardsViewModel = cardsViewModel,
                         repository = repository,
+                        processNfcScanUseCase = processNfcScanUseCase,
                         getCardBalanceUseCase = getCardBalanceUseCase,
                         isNfcSupported = nfcManager.isNfcSupported,
                         isNfcEnabled = nfcManager.isNfcEnabled,
@@ -156,6 +157,7 @@ class MainActivity : ComponentActivity() {
 fun SaetaAppContent(
     cardsViewModel: CardsViewModel,
     repository: CardRepository,
+    processNfcScanUseCase: ProcessNfcScanUseCase,
     getCardBalanceUseCase: GetCardBalanceUseCase,
     isNfcSupported: Boolean,
     isNfcEnabled: Boolean,
@@ -171,14 +173,15 @@ fun SaetaAppContent(
     // Handle NFC tag scanned events
     LaunchedEffect(Unit) {
         scannedTagFlow.collect { uid ->
+            scannedTagFlow.resetReplayCache()
             showNfcBottomSheet = false
-            coroutineScope.launch {
-                val db = repository.getCardByNfcUid(uid)
-                if (db != null) {
-                    getCardBalanceUseCase(db.cardNumber)
-                    currentScreen = Screen.CardDetail(db.id)
-                } else {
-                    newCardPrompt = NewCardPromptState(nfcUid = uid)
+            when (val result = processNfcScanUseCase(uid)) {
+                is com.saetasaldo.app.domain.usecase.NfcScanResult.ExistingCardFound -> {
+                    getCardBalanceUseCase(result.card.cardNumber)
+                    currentScreen = Screen.CardDetail(result.card.id)
+                }
+                is com.saetasaldo.app.domain.usecase.NfcScanResult.NewCardDiscovered -> {
+                    newCardPrompt = NewCardPromptState(nfcUid = result.nfcUid)
                 }
             }
         }

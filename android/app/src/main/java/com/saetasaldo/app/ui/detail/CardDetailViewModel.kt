@@ -17,11 +17,17 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import com.saetasaldo.app.data.remote.NetworkClient
+import com.saetasaldo.app.data.remote.api.SaetaApiService
+
 class CardDetailViewModel(
     val cardId: String,
     private val repository: CardRepository,
     private val getCardBalanceUseCase: GetCardBalanceUseCase,
-    private val calculateRemainingTripsUseCase: CalculateRemainingTripsUseCase = CalculateRemainingTripsUseCase()
+    private val calculateRemainingTripsUseCase: CalculateRemainingTripsUseCase = CalculateRemainingTripsUseCase(),
+    private val apiService: SaetaApiService? = null
 ) : ViewModel() {
 
     val card: StateFlow<SaetaCard?> = repository.getAllCards()
@@ -46,10 +52,45 @@ class CardDetailViewModel(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
+    private val _showFallbackCaptchaDialog = MutableStateFlow(false)
+    val showFallbackCaptchaDialog: StateFlow<Boolean> = _showFallbackCaptchaDialog.asStateFlow()
+
+    private val _captchaBitmap = MutableStateFlow<Bitmap?>(null)
+    val captchaBitmap: StateFlow<Bitmap?> = _captchaBitmap.asStateFlow()
+
     fun updateFare(newFare: Double) {
         if (newFare > 0.0) {
             _fare.value = newFare
         }
+    }
+
+    fun triggerManualCaptcha() {
+        _showFallbackCaptchaDialog.value = true
+        loadCaptchaBitmap()
+    }
+
+    fun dismissCaptchaDialog() {
+        _showFallbackCaptchaDialog.value = false
+    }
+
+    fun loadCaptchaBitmap() {
+        viewModelScope.launch {
+            _captchaBitmap.value = null
+            try {
+                val service = apiService ?: NetworkClient.apiService
+                val response = service.getCaptchaImage()
+                if (response.isSuccessful) {
+                    response.body()?.byteStream()?.use { stream ->
+                        _captchaBitmap.value = BitmapFactory.decodeStream(stream)
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun submitManualCaptcha(code: String) {
+        _showFallbackCaptchaDialog.value = false
+        refreshBalance(code)
     }
 
     fun refreshBalance(manualCaptcha: String? = null) {
@@ -60,10 +101,18 @@ class CardDetailViewModel(
             try {
                 val result = getCardBalanceUseCase(currentCard.cardNumber, manualCaptcha)
                 if (result.isFailure) {
-                    _errorMessage.value = result.exceptionOrNull()?.localizedMessage
+                    val errorMsg = result.exceptionOrNull()?.localizedMessage ?: "Error al actualizar saldo"
+                    _errorMessage.value = errorMsg
+                    if (manualCaptcha == null && (errorMsg.contains("captcha", ignoreCase = true) || errorMsg.contains("reintentos", ignoreCase = true))) {
+                        triggerManualCaptcha()
+                    }
                 }
             } catch (e: Exception) {
-                _errorMessage.value = e.localizedMessage ?: "Error al actualizar saldo"
+                val errorMsg = e.localizedMessage ?: "Error al actualizar saldo"
+                _errorMessage.value = errorMsg
+                if (manualCaptcha == null && (errorMsg.contains("captcha", ignoreCase = true) || errorMsg.contains("reintentos", ignoreCase = true))) {
+                    triggerManualCaptcha()
+                }
             } finally {
                 _isRefreshing.value = false
             }
