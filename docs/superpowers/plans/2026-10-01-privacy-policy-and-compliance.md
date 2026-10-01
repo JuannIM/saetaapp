@@ -37,7 +37,7 @@
 **Interfaces:**
 - Produces: Public Markdown documentation compliant with Google Play Console Developer Policies and Argentine Law 25.326.
 
-- [ ] **Step 1: Write PRIVACY_POLICY.md**
+- [x] **Step 1: Write PRIVACY_POLICY.md**
 Write `PRIVACY_POLICY.md` in the repository root detailing:
 - Data collected (card numbers, aliases, balance history).
 - Where data is stored (100% on-device SQLite).
@@ -47,13 +47,13 @@ Write `PRIVACY_POLICY.md` in the repository root detailing:
 - User rights (deletion, modification, full local control).
 - Legal disclaimers (independent open-source utility, not affiliated with SAETA S.A. or MiRedBus).
 
-- [ ] **Step 2: Write docs/compliance/DATA_SAFETY.md**
+- [x] **Step 2: Write docs/compliance/DATA_SAFETY.md**
 Write `docs/compliance/DATA_SAFETY.md` mapping line-by-line to the Google Play Console Data Safety questionnaire:
 - Data collected: None collected/shared off-device for tracking.
 - Ephemeral transit query: Card number transmitted over encrypted HTTPS to provider, not linked to identity, not stored on external servers.
 - Security practices: Data encrypted in transit (TLS 1.2+ HTTPS), user can delete all local data anytime.
 
-- [ ] **Step 3: Commit documentation**
+- [x] **Step 3: Commit documentation**
 
 ```bash
 git add PRIVACY_POLICY.md docs/compliance/DATA_SAFETY.md
@@ -71,7 +71,7 @@ git commit -m "docs: add comprehensive Privacy Policy and Google Play Data Safet
 **Interfaces:**
 - Produces: `PrivacyPolicyContent` providing structured offline privacy clauses, permission explanations, and transparency statements.
 
-- [ ] **Step 1: Write failing unit test**
+- [x] **Step 1: Write failing unit test**
 
 ```kotlin
 package com.saetasaldo.app.domain.model
@@ -105,9 +105,9 @@ class PrivacyPolicyContentTest {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
-- [ ] **Step 3: Implement PrivacyPolicyContent.kt**
+- [x] **Step 3: Implement PrivacyPolicyContent.kt**
 
 ```kotlin
 package com.saetasaldo.app.domain.model
@@ -153,9 +153,9 @@ object PrivacyPolicyContent {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add android/app/src/main/java/com/saetasaldo/app/domain/model/PrivacyPolicyContent.kt android/app/src/test/java/com/saetasaldo/app/domain/model/PrivacyPolicyContentTest.kt
@@ -174,19 +174,19 @@ git commit -m "feat: implement in-app privacy policy content provider and tests"
 - Consumes: `PrivacyPolicyContent`
 - Produces: `PrivacyPolicyDialog` composable displayed via TopAppBar action icon or menu.
 
-- [ ] **Step 1: Implement PrivacyPolicyDialog.kt**
+- [x] **Step 1: Implement PrivacyPolicyDialog.kt**
 Compose an `AlertDialog` with:
 - Scrollable content displaying each `PolicySection`.
 - A highlighted badge "100% Local • Sin Rastreo • Código Abierto".
 - An "Entendido" dismiss button.
 - Optional clickable link to GitHub repository.
 
-- [ ] **Step 2: Wire PrivacyPolicyDialog into CardsScreen.kt**
+- [x] **Step 2: Wire PrivacyPolicyDialog into CardsScreen.kt**
 Add an info / privacy icon button in `CardsTopAppBar` (e.g. `Icons.Default.Info` or `Icons.Default.Shield`) that toggles `showPrivacyDialog`.
 
-- [ ] **Step 3: Verify compilation and tests**
+- [x] **Step 3: Verify compilation and tests**
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add android/app/src/main/java/com/saetasaldo/app/ui/dialogs/PrivacyPolicyDialog.kt android/app/src/main/java/com/saetasaldo/app/ui/cards/CardsScreen.kt
