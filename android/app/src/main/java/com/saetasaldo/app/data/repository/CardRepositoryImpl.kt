@@ -72,10 +72,13 @@ class CardRepositoryImpl(
                 0 -> {
                     val amount = body.balances?.firstOrNull()?.amount ?: 0.0
                     val state = body.cardState ?: "ACTIVA"
-                    val cardType = CardType.fromBackendString(body.cardType)
 
                     // Find existing card by number or create stub
                     val existing = cardDao.getCardByNumber(cardNumber)
+                    val cardType = body.cardType?.let { CardType.fromBackendString(it) }
+                        ?: existing?.type
+                        ?: CardType.AZUL_COMUN
+
                     val updated = (existing ?: CardEntity(
                         name = "Tarjeta SAETA",
                         cardNumber = cardNumber,
@@ -89,16 +92,18 @@ class CardRepositoryImpl(
 
                     cardDao.insertCard(updated)
 
-                    // Record balance history change
+                    // Record balance history change only if balance changed or it's the initial record
                     val lastRecord = balanceHistoryDao.getLatestBalanceRecord(updated.id)
-                    val diff = if (lastRecord != null) amount - lastRecord.balance else 0.0
-                    balanceHistoryDao.insertRecord(
-                        BalanceHistoryEntity(
-                            cardId = updated.id,
-                            balance = amount,
-                            difference = diff
+                    if (lastRecord == null || amount != lastRecord.balance) {
+                        val diff = if (lastRecord != null) amount - lastRecord.balance else 0.0
+                        balanceHistoryDao.insertRecord(
+                            BalanceHistoryEntity(
+                                cardId = updated.id,
+                                balance = amount,
+                                difference = diff
+                            )
                         )
-                    )
+                    }
 
                     Result.success(updated.toDomain())
                 }
