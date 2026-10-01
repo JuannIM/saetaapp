@@ -5,3 +5,7 @@ logs2/
 build/
 DerivedData/
 *.xcresult
+graphify-out/
+.gradle/
+.idea/
+*.iml
