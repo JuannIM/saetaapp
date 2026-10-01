@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Nfc
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -36,7 +37,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -46,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.saetasaldo.app.domain.model.SaetaCard
 import com.saetasaldo.app.ui.cards.components.SaetaCardItem
+import com.saetasaldo.app.ui.dialogs.PrivacyPolicyDialog
 import com.saetasaldo.app.ui.theme.SaetaBluePrimary
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -62,6 +66,7 @@ fun CardsScreen(
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    var showPrivacyDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(errorMessage) {
         errorMessage?.let { msg ->
@@ -82,6 +87,12 @@ fun CardsScreen(
                     )
                 },
                 actions = {
+                    IconButton(onClick = { showPrivacyDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Shield,
+                            contentDescription = "Privacidad y Seguridad"
+                        )
+                    }
                     IconButton(onClick = onAddCardClick) {
                         Icon(
                             imageVector = Icons.Default.Add,
@@ -207,5 +218,11 @@ fun CardsScreen(
                 }
             }
         }
+    }
+
+    if (showPrivacyDialog) {
+        PrivacyPolicyDialog(
+            onDismiss = { showPrivacyDialog = false }
+        )
     }
 }
