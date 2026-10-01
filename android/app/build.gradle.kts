@@ -61,7 +61,7 @@ dependencies {
     implementation(libs.okhttp.logging)
 
     // ML Kit OCR
-    implementation(libs.mlkit.text-recognition)
+    implementation(libs.mlkit.text.recognition)
 
     // Glance Widget
     implementation(libs.androidx.glance.appwidget)
