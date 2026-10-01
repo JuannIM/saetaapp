@@ -9,3 +9,5 @@ graphify-out/
 .gradle/
 .idea/
 *.iml
+*.apk
+apk_output/

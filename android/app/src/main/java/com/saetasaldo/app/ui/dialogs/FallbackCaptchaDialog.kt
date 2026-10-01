@@ -49,6 +49,10 @@ fun FallbackCaptchaDialog(
 ) {
     var enteredCode by remember { mutableStateOf("") }
 
+    LaunchedEffect(captchaBitmap) {
+        enteredCode = ""
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -110,18 +114,22 @@ fun FallbackCaptchaDialog(
                 // Captcha Text Field
                 OutlinedTextField(
                     value = enteredCode,
-                    onValueChange = { enteredCode = it.uppercase().take(6) },
+                    onValueChange = { enteredCode = it.filter { ch -> ch.isLetterOrDigit() }.take(8) },
                     label = { Text("Código del Captcha") },
-                    placeholder = { Text("Ej: 4B8Y") },
+                    placeholder = { Text("Ej: bdkd67") },
+                    supportingText = { Text("Ingresá las letras en minúsculas y números tal como se ven") },
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.None,
+                        autoCorrectEnabled = false
+                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
         },
         confirmButton = {
             Button(
-                onClick = { onConfirm(enteredCode) },
+                onClick = { onConfirm(enteredCode.trim()) },
                 enabled = enteredCode.isNotBlank()
             ) {
                 Text("Verificar")

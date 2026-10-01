@@ -6,7 +6,7 @@ import android.graphics.Color
 object CaptchaPreprocessor {
 
     fun cleanOcrOutput(raw: String): String {
-        return raw.filter { it.isLetterOrDigit() }.uppercase()
+        return raw.filter { it.isLetterOrDigit() }
     }
 
     fun isLikelyValid(code: String): Boolean {

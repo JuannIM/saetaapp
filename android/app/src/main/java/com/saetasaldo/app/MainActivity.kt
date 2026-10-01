@@ -194,9 +194,13 @@ fun SaetaAppContent(
                 onCardClick = { card ->
                     currentScreen = Screen.CardDetail(card.id)
                 },
+                onAddCardClick = {
+                    newCardPrompt = NewCardPromptState(nfcUid = null)
+                },
                 onScanNfcClick = {
                     showNfcBottomSheet = true
-                }
+                },
+                isNfcSupported = isNfcSupported
             )
         }
 
@@ -230,7 +234,7 @@ fun SaetaAppContent(
         )
     }
 
-    // New Card Prompt Dialog (after NFC detection of unknown card)
+    // New Card Prompt Dialog (Manual or after NFC detection)
     newCardPrompt?.let { promptState ->
         NewCardRegistrationDialog(
             nfcUid = promptState.nfcUid,
@@ -267,7 +271,7 @@ fun NewCardRegistrationDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = if (nfcUid != null) "Tarjeta NFC Detectada" else "Registrar Tarjeta",
+                text = if (nfcUid != null) "Tarjeta NFC Detectada" else "Agregar Tarjeta SAETA",
                 fontWeight = FontWeight.Bold
             )
         },
@@ -287,7 +291,8 @@ fun NewCardRegistrationDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Nombre (ej: Mi Tarjeta)") },
+                    label = { Text("Nombre o Alias (opcional)") },
+                    placeholder = { Text("Ej: Mi Tarjeta, Trabajo, etc.") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -295,7 +300,9 @@ fun NewCardRegistrationDialog(
                 OutlinedTextField(
                     value = cardNumber,
                     onValueChange = { cardNumber = it.filter { ch -> ch.isDigit() } },
-                    label = { Text("Número de Tarjeta (impreso al frente)") },
+                    label = { Text("Número de Tarjeta") },
+                    placeholder = { Text("Ej: 12345678") },
+                    supportingText = { Text("Dígitos impresos en el plástico de la tarjeta") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()

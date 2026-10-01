@@ -18,14 +18,14 @@ class CaptchaPreprocessorTest {
     fun `cleanOcrOutput retains valid alphanumeric characters`() {
         val valid = "k8M2"
         val cleaned = CaptchaPreprocessor.cleanOcrOutput(valid)
-        assertEquals("K8M2", cleaned)
+        assertEquals("k8M2", cleaned)
     }
 
     @Test
     fun `cleanOcrOutput handles lowercase and special characters`() {
         val dirty = "a#b$ c%9! "
         val cleaned = CaptchaPreprocessor.cleanOcrOutput(dirty)
-        assertEquals("ABC9", cleaned)
+        assertEquals("abc9", cleaned)
     }
 
     @Test

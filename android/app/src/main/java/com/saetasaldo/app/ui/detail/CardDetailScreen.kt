@@ -108,6 +108,12 @@ fun CardDetailScreen(
         }
     }
 
+    LaunchedEffect(card?.id) {
+        if (card != null && card?.lastUpdated == 0L) {
+            viewModel.refreshBalance()
+        }
+    }
+
     if (showCaptchaDialog) {
         FallbackCaptchaDialog(
             captchaBitmap = captchaBitmap,

@@ -12,16 +12,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Nfc
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -50,7 +53,9 @@ import com.saetasaldo.app.ui.theme.SaetaBluePrimary
 fun CardsScreen(
     viewModel: CardsViewModel,
     onCardClick: (SaetaCard) -> Unit,
+    onAddCardClick: () -> Unit,
     onScanNfcClick: () -> Unit,
+    isNfcSupported: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val cards by viewModel.cards.collectAsState()
@@ -77,6 +82,12 @@ fun CardsScreen(
                     )
                 },
                 actions = {
+                    IconButton(onClick = onAddCardClick) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Agregar tarjeta manualmente"
+                        )
+                    }
                     IconButton(
                         onClick = { viewModel.refreshAllBalances() },
                         enabled = !isRefreshing
@@ -94,14 +105,30 @@ fun CardsScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onScanNfcClick,
-                containerColor = SaetaBluePrimary,
-                contentColor = Color.White
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Nfc,
-                    contentDescription = "Escanear NFC"
+                if (isNfcSupported) {
+                    FloatingActionButton(
+                        onClick = onScanNfcClick,
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Nfc,
+                            contentDescription = "Escanear NFC",
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+                ExtendedFloatingActionButton(
+                    onClick = onAddCardClick,
+                    containerColor = SaetaBluePrimary,
+                    contentColor = Color.White,
+                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                    text = { Text("Nueva Tarjeta") }
                 )
             }
         }
@@ -139,19 +166,29 @@ fun CardsScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Acercá tu tarjeta SAETA al teléfono o tocá el botón para escanear con NFC.",
+                            text = "Ingresá el número de tu tarjeta SAETA para consultar saldo o acercala al teléfono con NFC.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                             textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(24.dp))
                         Button(
-                            onClick = onScanNfcClick,
+                            onClick = onAddCardClick,
                             colors = ButtonDefaults.buttonColors(containerColor = SaetaBluePrimary)
                         ) {
-                            Icon(Icons.Default.Nfc, contentDescription = null)
+                            Icon(Icons.Default.Add, contentDescription = null)
                             Spacer(modifier = Modifier.size(8.dp))
-                            Text("Escanear Tarjeta NFC")
+                            Text("Agregar Tarjeta (Manual)")
+                        }
+                        if (isNfcSupported) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            OutlinedButton(
+                                onClick = onScanNfcClick
+                            ) {
+                                Icon(Icons.Default.Nfc, contentDescription = null)
+                                Spacer(modifier = Modifier.size(8.dp))
+                                Text("Escanear con NFC")
+                            }
                         }
                     }
                 }
