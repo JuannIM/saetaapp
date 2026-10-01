@@ -111,7 +111,8 @@ class CardDetailViewModelTest {
         assertEquals(1035.0, viewModel.fare.value, 0.01)
         val estimate = viewModel.tripEstimate.value
         assertEquals(2, estimate?.regularTrips)
-        assertEquals(4, estimate?.totalPossibleTrips) // 2 regular + 2 emergency
+        assertEquals(0, estimate?.emergencyTrips)
+        assertEquals(2, estimate?.totalPossibleTrips)
     }
 
     @Test
