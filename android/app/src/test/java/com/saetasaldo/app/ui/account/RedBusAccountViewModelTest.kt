@@ -207,7 +207,7 @@ class RedBusAccountViewModelTest {
     }
 
     @Test
-    fun `disconnected check during verification shows no active session message`() = runTest {
+    fun `disconnected check during verification stays silent`() = runTest {
         coEvery { accountRepository.checkSession() } coAnswers {
             sessionState.value = RedBusSessionState.Disconnected
             Result.success(RedBusSessionState.Disconnected)
@@ -220,7 +220,8 @@ class RedBusAccountViewModelTest {
         advanceUntilIdle()
 
         assertEquals(RedBusSessionState.Disconnected, viewModel.uiState.value.sessionState)
-        assertEquals("No se encontró una sesión activa.", viewModel.uiState.value.message)
+        // Mid-login Disconnected is expected: no alarming message is shown.
+        assertEquals(null, viewModel.uiState.value.message)
         coVerify(exactly = 0) { accountRepository.getLinkedCards() }
         coVerify(exactly = 0) { syncRedBusCardsUseCase(any()) }
     }
@@ -244,17 +245,18 @@ class RedBusAccountViewModelTest {
 
     @Test
     fun `consumeMessage clears the current message`() = runTest {
-        coEvery { accountRepository.checkSession() } coAnswers {
-            sessionState.value = RedBusSessionState.Disconnected
-            Result.success(RedBusSessionState.Disconnected)
-        }
+        coEvery { accountRepository.checkSession() } returns
+            Result.failure(RedBusNetworkException(IOException("timeout")))
         val viewModel = RedBusAccountViewModel(accountRepository, syncRedBusCardsUseCase)
         backgroundScope.launch { viewModel.uiState.collect() }
         advanceUntilIdle()
 
         viewModel.verifyLoginAndSync()
         advanceUntilIdle()
-        assertEquals("No se encontró una sesión activa.", viewModel.uiState.value.message)
+        assertEquals(
+            "Falló la conexión con RedBus. Reintentá en unos segundos.",
+            viewModel.uiState.value.message
+        )
 
         viewModel.consumeMessage()
         advanceUntilIdle()

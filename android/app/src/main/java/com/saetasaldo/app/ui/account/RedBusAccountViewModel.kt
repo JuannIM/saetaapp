@@ -63,9 +63,14 @@ class RedBusAccountViewModel(
             _isSyncing.value = true
             _message.value = null
             try {
-                val sessionState = accountRepository.checkSession().getOrNull()
-                if (sessionState != RedBusSessionState.Connected) {
-                    _message.value = "No se encontró una sesión activa."
+                val sessionResult = accountRepository.checkSession()
+                if (sessionResult.getOrNull() != RedBusSessionState.Connected) {
+                    // A clean Disconnected is expected while the user is still on
+                    // the login page: stay silent and let the next page
+                    // completion re-verify. Only surface real check failures.
+                    sessionResult.exceptionOrNull()?.let { error ->
+                        _message.value = error.message ?: "No se encontró una sesión activa."
+                    }
                 } else {
                     fetchAndSyncCards { result ->
                         val count = result.syncedCardNumbers.size
