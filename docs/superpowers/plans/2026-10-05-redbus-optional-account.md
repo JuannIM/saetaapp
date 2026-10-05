@@ -229,7 +229,7 @@ git commit -m "feat: define RedBus account response contracts"
   logout requests.
 - Produces: `RedBusAccountNetworkClient.create(cookieJar)`.
 
-- [ ] **Step 1: Write failing cookie-boundary tests**
+- [x] **Step 1: Write failing cookie-boundary tests**
 
 Add tests:
 
@@ -256,7 +256,7 @@ gradle testDebugUnitTest --tests "*WebViewCookieJarTest" --stacktrace
 
 Expected: FAIL because the adapter does not exist.
 
-- [ ] **Step 3: Implement the cookie boundary**
+- [x] **Step 3: Implement the cookie boundary**
 
 Define:
 
@@ -274,7 +274,7 @@ non-HTTPS and non-`salta.miredbus.com.ar` requests before reading the store.
 Parse request-cookie pairs with a split limit of two so values containing `=`
 remain intact.
 
-- [ ] **Step 4: Add the account API and client**
+- [x] **Step 4: Add the account API and client**
 
 Define Retrofit methods from Task 0:
 
