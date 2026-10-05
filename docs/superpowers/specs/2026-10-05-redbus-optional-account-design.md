@@ -51,16 +51,33 @@ Fuentes:
 - https://developer.android.com/reference/android/webkit/CookieManager
 - https://developer.android.com/privacy-and-security/risks/insecure-webview-native-bridges
 
-### Supuestos que deben validarse antes de implementar los DTO
+### Contrato autenticado validado
 
-- Una respuesta autenticada real y anonimizada confirmara la forma completa de
-  `listaTarjetas`.
+Una captura autorizada y anonimizada confirmo:
+
+- `listaTarjetas.error` es `0` en una respuesta autenticada exitosa;
+- las tarjetas estan en `tarjetas`;
+- el numero externo esta en
+  `tarjetas[].tarjetaDatosAdicionales.codExterno` y llega como numero;
+- los monederos estan en
+  `tarjetas[].tarjetaDatosAdicionales.saldos`;
+- cada entrada contiene `saldo` numerico y
+  `monedero.nombre`;
+- tipo y estado estan en `tarjetaDatosAdicionales.tipoTarjeta` y
+  `tarjetaDatosAdicionales.estadoTarjeta`;
+- `fechaSaldo`, `fechaAlta` y `fechaUltimaTRX` llegan como valores numericos.
+
+Los fixtures anonimizados estan en
+`android/app/src/test/resources/redbus/`.
+
+### Supuestos restantes
+
 - El monedero monetario se identifica con la descripcion
   `Principal (Dinero)`.
 - `JSESSIONID` y `SERVER_USED`, administradas por `CookieManager`, son
   suficientes para consumir las rutas autenticadas desde OkHttp.
-- El cierre remoto usa `GET`; si no se confirma, la primera version cerrara la
-  sesion local eliminando cookies y no inventara un metodo.
+- El metodo de cierre remoto no se confirmo. La primera version cerrara la
+  sesion local eliminando cookies y no inventara una llamada al endpoint.
 
 La validacion se realiza con una cuenta autorizada por su titular. Nunca se
 solicitan credenciales para pruebas ni se incorporan datos reales a fixtures,
@@ -379,6 +396,6 @@ La verificacion autoritativa tambien se ejecuta en
    del chat si fuera necesario.
 2. Aprobar esta especificacion y el plan asociado.
 3. Capturar y anonimizar fixtures reales con una cuenta autorizada.
-4. Confirmar el contrato de cierre de sesion.
+4. Mantener cierre local hasta confirmar el contrato remoto.
 5. Implementar en una rama `feature/redbus-account-session`.
 6. Mostrar el diff completo para revision humana antes de subir o abrir PR.

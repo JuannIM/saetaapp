@@ -1,0 +1,13 @@
+{
+  "error": 1,
+  "id": null,
+  "username": null,
+  "apellido": null,
+  "nombre": null,
+  "documento": null,
+  "roles": null,
+  "sistema": null,
+  "telefono": null,
+  "genero": null,
+  "fechaNacimiento": null
+}

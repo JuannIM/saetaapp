@@ -9,13 +9,13 @@ Detailed steps and exact interfaces live in
 cookies and establish fixtures before DTO code is written.
 
 **Acceptance criteria:**
-- [ ] Session and card fixtures preserve the real JSON shape with synthetic data.
-- [ ] Logout method is confirmed or local-only disconnect is documented.
-- [ ] A human confirms that no personal or session data remains.
+- [x] Session and card fixtures preserve the real JSON shape with synthetic data.
+- [x] Logout method is confirmed or local-only disconnect is documented.
+- [x] A human confirms that no personal or session data remains.
 
 **Verification:**
-- [ ] `git diff -- android/app/src/test/resources/redbus`
-- [ ] Secret-pattern scan returns no matches.
+- [x] `git diff -- android/app/src/test/resources/redbus`
+- [x] Secret-pattern scan returns no matches.
 
 **Dependencies:** None
 **Estimated scope:** Medium
