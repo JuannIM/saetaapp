@@ -319,7 +319,7 @@ git commit -m "feat: isolate authenticated RedBus cookies"
 - Produces: typed internal failures for expired sessions, HTTP/network errors,
   and incompatible response contracts.
 
-- [ ] **Step 1: Write failing repository tests**
+- [x] **Step 1: Write failing repository tests**
 
 Add tests:
 
@@ -343,7 +343,7 @@ gradle testDebugUnitTest --tests "*RedBusAccountRepositoryTest" --stacktrace
 
 Expected: FAIL because the implementation is absent.
 
-- [ ] **Step 3: Implement session semantics**
+- [x] **Step 3: Implement session semantics**
 
 `checkSession()` sets `Checking` only while the request is active. A recognized
 `error == 0` becomes `Connected`; a recognized unauthenticated response becomes
