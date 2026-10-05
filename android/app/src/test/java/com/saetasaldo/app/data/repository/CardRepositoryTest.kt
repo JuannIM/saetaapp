@@ -439,4 +439,3 @@ class CardRepositoryTest {
         coVerify(exactly = 1) { balanceHistoryDao.insertRecord(match { it.balance == 900.0 && it.difference == 0.0 }) }
     }
 }
-}
