@@ -105,8 +105,7 @@ class CardsViewModelTest {
         viewModel.addNewCard(
             name = "Mi Tarjeta",
             cardNumber = "999999",
-            nfcUid = "04A1B2C3",
-            type = CardType.AZUL_COMUN
+            nfcUid = "04A1B2C3"
         ) { result ->
             callbackInvoked = true
             assertTrue(result.isSuccess)
@@ -116,7 +115,7 @@ class CardsViewModelTest {
         assertTrue(callbackInvoked)
         coVerify(exactly = 1) {
             repository.saveCard(match {
-                it.cardNumber == "999999" && it.name == "Mi Tarjeta" && it.nfcUid == "04A1B2C3"
+                it.cardNumber == "999999" && it.name == "Mi Tarjeta" && it.nfcUid == "04A1B2C3" && it.type == CardType.AZUL_COMUN
             })
         }
         coVerify(exactly = 1) { getCardBalanceUseCase("999999") }

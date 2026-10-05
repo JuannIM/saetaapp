@@ -42,7 +42,7 @@ class CardDetailViewModel(
 
     val tripEstimate: StateFlow<TripEstimate?> = combine(card, fare) { currentCard, currentFare ->
         currentCard?.currentBalance?.let { balance ->
-            calculateRemainingTripsUseCase(balance, currentFare, currentCard.type)
+            calculateRemainingTripsUseCase(balance, currentFare)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 

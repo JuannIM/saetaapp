@@ -10,8 +10,6 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.text.KeyboardOptions
@@ -20,7 +18,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -32,7 +29,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -43,7 +39,6 @@ import com.saetasaldo.app.data.nfc.AndroidNfcManager
 import com.saetasaldo.app.data.ocr.MlKitCaptchaSolver
 import com.saetasaldo.app.data.remote.NetworkClient
 import com.saetasaldo.app.data.repository.CardRepositoryImpl
-import com.saetasaldo.app.domain.model.CardType
 import com.saetasaldo.app.domain.model.SaetaCard
 import com.saetasaldo.app.domain.repository.CardRepository
 import com.saetasaldo.app.domain.usecase.GetCardBalanceUseCase
@@ -245,12 +240,11 @@ fun SaetaAppContent(
         NewCardRegistrationDialog(
             nfcUid = promptState.nfcUid,
             onDismiss = { newCardPrompt = null },
-            onConfirm = { name, cardNumber, cardType ->
+            onConfirm = { name, cardNumber ->
                 cardsViewModel.addNewCard(
                     name = name,
                     cardNumber = cardNumber,
-                    nfcUid = promptState.nfcUid,
-                    type = cardType
+                    nfcUid = promptState.nfcUid
                 ) { result ->
                     val saved = result.getOrNull()
                     if (saved != null) {
@@ -267,11 +261,10 @@ fun SaetaAppContent(
 fun NewCardRegistrationDialog(
     nfcUid: String?,
     onDismiss: () -> Unit,
-    onConfirm: (name: String, cardNumber: String, type: CardType) -> Unit
+    onConfirm: (name: String, cardNumber: String) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var cardNumber by remember { mutableStateOf("") }
-    var selectedType by remember { mutableStateOf(CardType.AZUL_COMUN) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -313,34 +306,11 @@ fun NewCardRegistrationDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-
-                Text(
-                    text = "Tipo de Tarjeta:",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    RadioButton(
-                        selected = selectedType == CardType.AZUL_COMUN,
-                        onClick = { selectedType = CardType.AZUL_COMUN }
-                    )
-                    Text("Público (Azul)", style = MaterialTheme.typography.bodyMedium)
-                    Spacer(modifier = Modifier.weight(1f))
-                    RadioButton(
-                        selected = selectedType == CardType.VERDE_BENEFICIARIO,
-                        onClick = { selectedType = CardType.VERDE_BENEFICIARIO }
-                    )
-                    Text("Beneficiario (Verde)", style = MaterialTheme.typography.bodyMedium)
-                }
             }
         },
         confirmButton = {
             Button(
-                onClick = { onConfirm(name, cardNumber, selectedType) },
+                onClick = { onConfirm(name, cardNumber) },
                 enabled = cardNumber.isNotBlank()
             ) {
                 Text("Guardar y Consultar")

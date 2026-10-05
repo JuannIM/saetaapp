@@ -2,7 +2,6 @@ package com.saetasaldo.app.ui.cards
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.saetasaldo.app.domain.model.CardType
 import com.saetasaldo.app.domain.model.SaetaCard
 import com.saetasaldo.app.domain.repository.CardRepository
 import com.saetasaldo.app.domain.usecase.GetCardBalanceUseCase
@@ -72,7 +71,6 @@ class CardsViewModel(
         name: String,
         cardNumber: String,
         nfcUid: String? = null,
-        type: CardType = CardType.AZUL_COMUN,
         onComplete: ((Result<SaetaCard>) -> Unit)? = null
     ) {
         viewModelScope.launch {
@@ -84,7 +82,6 @@ class CardsViewModel(
                     name = name.ifBlank { "Tarjeta SAETA" },
                     cardNumber = cardNumber.trim(),
                     nfcUid = nfcUid?.trim()?.uppercase(),
-                    type = type,
                     isFavorite = isFirstCard
                 )
                 repository.saveCard(newCard)

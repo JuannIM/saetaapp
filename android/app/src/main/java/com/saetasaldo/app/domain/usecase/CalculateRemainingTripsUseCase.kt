@@ -1,13 +1,11 @@
 package com.saetasaldo.app.domain.usecase
 
-import com.saetasaldo.app.domain.model.CardType
 import com.saetasaldo.app.domain.model.TripEstimate
 import kotlin.math.floor
-import kotlin.math.max
 
 class CalculateRemainingTripsUseCase {
 
-    operator fun invoke(balance: Double, fare: Double, cardType: CardType): TripEstimate {
+    operator fun invoke(balance: Double, fare: Double): TripEstimate {
         val safeFare = if (fare <= 0.0 || fare.isNaN()) 1450.0 else fare
         val isInNegative = balance < 0.0
 
