@@ -389,7 +389,7 @@ git commit -m "feat: manage optional RedBus account sessions"
 - Preserves: `refreshCardBalance(cardNumber, manualCaptcha)` as the anonymous
   captcha/OCR operation.
 
-- [ ] **Step 1: Add failing persistence tests**
+- [x] **Step 1: Add failing persistence tests**
 
 Add tests:
 
@@ -412,7 +412,7 @@ gradle testDebugUnitTest --tests "*CardRepositoryTest" --stacktrace
 
 Expected: FAIL because `applyBalanceUpdate` is absent.
 
-- [ ] **Step 3: Add the update contract**
+- [x] **Step 3: Add the update contract**
 
 Define:
 
@@ -432,7 +432,7 @@ Add:
 suspend fun applyBalanceUpdate(update: CardBalanceUpdate): SaetaCard
 ```
 
-- [ ] **Step 4: Refactor the existing anonymous success path**
+- [x] **Step 4: Refactor the existing anonymous success path**
 
 Move the existing upsert/history behavior into `applyBalanceUpdate`. Make
 `refreshCardBalance` construct an update from `SaldoResponseDto` and delegate
