@@ -31,7 +31,7 @@ external response into principal-balance cards.
 - [x] Malformed cards are omitted without hiding valid siblings.
 
 **Verification:**
-- [ ] `gradle testDebugUnitTest --tests "*RedBusAccountDtosTest" --stacktrace`
+- [x] `gradle testDebugUnitTest --tests "*RedBusAccountDtosTest" --stacktrace`
 
 **Dependencies:** Task 0
 **Estimated scope:** Medium
@@ -47,7 +47,7 @@ client without changing the anonymous cookie jar.
 - [x] Account endpoints are absent from the anonymous client.
 
 **Verification:**
-- [ ] `gradle testDebugUnitTest --tests "*WebViewCookieJarTest" --tests "*SessionCookieJarTest" --stacktrace`
+- [x] `gradle testDebugUnitTest --tests "*WebViewCookieJarTest" --tests "*SessionCookieJarTest" --stacktrace`
 
 **Dependencies:** Task 1
 **Estimated scope:** Medium
@@ -63,7 +63,7 @@ explicit error semantics.
 - [x] Disconnect always clears local cookies.
 
 **Verification:**
-- [ ] `gradle testDebugUnitTest --tests "*RedBusAccountRepositoryTest" --stacktrace`
+- [x] `gradle testDebugUnitTest --tests "*RedBusAccountRepositoryTest" --stacktrace`
 
 **Dependencies:** Tasks 1-2
 **Estimated scope:** Small
@@ -79,7 +79,7 @@ update function.
 - [ ] History is written only when the monetary balance changes.
 
 **Verification:**
-- [ ] `gradle testDebugUnitTest --tests "*CardRepositoryTest" --stacktrace`
+- [x] `gradle testDebugUnitTest --tests "*CardRepositoryTest" --stacktrace`
 
 **Dependencies:** Task 1
 **Estimated scope:** Medium
@@ -101,7 +101,7 @@ card before falling back to anonymous captcha/OCR.
 - [ ] Cancellation is rethrown.
 
 **Verification:**
-- [ ] `gradle testDebugUnitTest --tests "*GetCardBalanceUseCaseTest" --stacktrace`
+- [x] `gradle testDebugUnitTest --tests "*GetCardBalanceUseCaseTest" --stacktrace`
 
 **Dependencies:** Tasks 3-4
 **Estimated scope:** Small
@@ -117,7 +117,7 @@ the uncovered local cards.
 - [ ] Partial failures do not discard successful updates.
 
 **Verification:**
-- [ ] `gradle testDebugUnitTest --tests "*SyncRedBusCardsUseCaseTest" --tests "*RefreshAllBalancesUseCaseTest" --stacktrace`
+- [x] `gradle testDebugUnitTest --tests "*SyncRedBusCardsUseCaseTest" --tests "*RefreshAllBalancesUseCaseTest" --stacktrace`
 
 **Dependencies:** Tasks 3-5
 **Estimated scope:** Medium
@@ -133,7 +133,7 @@ without retaining account PII.
 - [ ] UI state contains no username, document, raw response, or cookie.
 
 **Verification:**
-- [ ] `gradle testDebugUnitTest --tests "*RedBusAccountViewModelTest" --stacktrace`
+- [x] `gradle testDebugUnitTest --tests "*RedBusAccountViewModelTest" --stacktrace`
 
 **Dependencies:** Tasks 3 and 6
 **Estimated scope:** Small
@@ -155,8 +155,8 @@ and no native JavaScript bridge.
 - [ ] TLS errors cancel and the WebView is destroyed on exit.
 
 **Verification:**
-- [ ] `gradle testDebugUnitTest --tests "*RedBusWebViewSecurityTest" --stacktrace`
-- [ ] `gradle assembleDebug --stacktrace`
+- [x] `gradle testDebugUnitTest --tests "*RedBusWebViewSecurityTest" --stacktrace`
+- [x] `gradle assembleDebug --stacktrace`
 - [ ] Manual Turnstile login on a real device.
 
 **Dependencies:** Tasks 2, 3, and 7
@@ -172,7 +172,7 @@ and no native JavaScript bridge.
 - [ ] Loading resets after success, failure, or cancellation.
 
 **Verification:**
-- [ ] `gradle testDebugUnitTest --tests "*CardsViewModelTest" --stacktrace`
+- [x] `gradle testDebugUnitTest --tests "*CardsViewModelTest" --stacktrace`
 
 **Dependencies:** Task 6
 **Estimated scope:** Small
@@ -188,7 +188,7 @@ the cards screen.
 - [ ] Every icon action has a state-appropriate Spanish content description.
 
 **Verification:**
-- [ ] `gradle assembleDebug --stacktrace`
+- [x] `gradle assembleDebug --stacktrace`
 - [ ] Manual font-scale and accessibility check.
 
 **Dependencies:** Tasks 7 and 9
@@ -205,8 +205,8 @@ manual navigation, and unchanged anonymous widget path.
 - [ ] Widget refresh never initializes or depends on the account WebView.
 
 **Verification:**
-- [ ] `gradle test --stacktrace`
-- [ ] `gradle assembleDebug --stacktrace`
+- [x] `gradle test --stacktrace`
+- [x] `gradle assembleDebug --stacktrace`
 
 **Dependencies:** Tasks 5-10
 **Estimated scope:** Medium
@@ -228,7 +228,7 @@ the optional account behavior.
 - [ ] Credentials, session cookies, and principal card sync are described accurately.
 
 **Verification:**
-- [ ] `gradle testDebugUnitTest --tests "*PrivacyPolicyContentTest" --stacktrace`
+- [x] `gradle testDebugUnitTest --tests "*PrivacyPolicyContentTest" --stacktrace`
 
 **Dependencies:** Task 11
 **Estimated scope:** Medium
@@ -244,8 +244,8 @@ and prepare a human-reviewed feature branch.
 - [ ] The human reviews and approves the complete diff before push.
 
 **Verification:**
-- [ ] `gradle test --stacktrace`
-- [ ] `gradle assembleDebug --stacktrace`
+- [x] `gradle test --stacktrace`
+- [x] `gradle assembleDebug --stacktrace`
 - [ ] `git diff --check`
 - [ ] Human reviews the complete `git diff`.
 
