@@ -635,7 +635,7 @@ git commit -m "feat: sync linked RedBus cards efficiently"
 - Produces: `checkExistingSession()`, `verifyLoginAndSync()`, `sync()`,
   `disconnect()`, and `consumeMessage()`.
 
-- [ ] **Step 1: Write failing state-machine tests**
+- [x] **Step 1: Write failing state-machine tests**
 
 Add tests:
 
@@ -659,7 +659,7 @@ gradle testDebugUnitTest --tests "*RedBusAccountViewModelTest" --stacktrace
 
 Expected: FAIL because the ViewModel is absent.
 
-- [ ] **Step 3: Implement the UI state**
+- [x] **Step 3: Implement the UI state**
 
 Define:
 
