@@ -26,9 +26,9 @@ cookies and establish fixtures before DTO code is written.
 external response into principal-balance cards.
 
 **Acceptance criteria:**
-- [ ] Session states and repository interface match the design spec.
-- [ ] Only `Principal (Dinero)` maps to `RedBusAccountCard.balance`.
-- [ ] Malformed cards are omitted without hiding valid siblings.
+- [x] Session states and repository interface match the design spec.
+- [x] Only `Principal (Dinero)` maps to `RedBusAccountCard.balance`.
+- [x] Malformed cards are omitted without hiding valid siblings.
 
 **Verification:**
 - [ ] `gradle testDebugUnitTest --tests "*RedBusAccountDtosTest" --stacktrace`
@@ -42,9 +42,9 @@ external response into principal-balance cards.
 client without changing the anonymous cookie jar.
 
 **Acceptance criteria:**
-- [ ] Cookies are available only to exact HTTPS RedBus requests.
-- [ ] Response cookies are returned to `CookieManager` and can be cleared.
-- [ ] Account endpoints are absent from the anonymous client.
+- [x] Cookies are available only to exact HTTPS RedBus requests.
+- [x] Response cookies are returned to `CookieManager` and can be cleared.
+- [x] Account endpoints are absent from the anonymous client.
 
 **Verification:**
 - [ ] `gradle testDebugUnitTest --tests "*WebViewCookieJarTest" --tests "*SessionCookieJarTest" --stacktrace`
@@ -58,9 +58,9 @@ client without changing the anonymous cookie jar.
 explicit error semantics.
 
 **Acceptance criteria:**
-- [ ] Only `usuarioLogeado.error == 0` produces `Connected`.
-- [ ] Error `99` disconnects while transient network errors remain retryable.
-- [ ] Disconnect always clears local cookies.
+- [x] Only `usuarioLogeado.error == 0` produces `Connected`.
+- [x] Error `99` disconnects while transient network errors remain retryable.
+- [x] Disconnect always clears local cookies.
 
 **Verification:**
 - [ ] `gradle testDebugUnitTest --tests "*RedBusAccountRepositoryTest" --stacktrace`
@@ -74,7 +74,7 @@ explicit error semantics.
 update function.
 
 **Acceptance criteria:**
-- [ ] Existing alias, NFC UID, and favorite status are preserved.
+- [x] Existing alias, NFC UID, and favorite status are preserved.
 - [ ] New cards use a safe suggested/default name.
 - [ ] History is written only when the monetary balance changes.
 
@@ -88,7 +88,7 @@ update function.
 
 - [ ] Tasks 0-4 are reviewed.
 - [ ] Cookie-boundary and repository regression tests pass.
-- [ ] No Room migration, dependency, secret, or personal data was added.
+- [x] No Room migration, dependency, secret, or personal data was added.
 
 ## Task 5: Prefer Account Balance For One Card
 
@@ -96,7 +96,7 @@ update function.
 card before falling back to anonymous captcha/OCR.
 
 **Acceptance criteria:**
-- [ ] Linked card uses account data without an anonymous request.
+- [x] Linked card uses account data without an anonymous request.
 - [ ] Manual captcha, unlinked, expired, network, and contract-error cases use fallback.
 - [ ] Cancellation is rethrown.
 
