@@ -123,7 +123,7 @@ git commit -m "test: document sanitized RedBus account contracts"
 - Produces: `RedBusAccountRepository.sessionState`, `checkSession()`, `getLinkedCards()`, and `disconnect()`.
 - Produces: `RedBusCardListDto.toDomainCards(): List<RedBusAccountCard>`.
 
-- [ ] **Step 1: Write fixture-backed failing DTO tests**
+- [x] **Step 1: Write fixture-backed failing DTO tests**
 
 Add tests with these exact behaviors:
 
@@ -150,7 +150,7 @@ gradle testDebugUnitTest --tests "*RedBusAccountDtosTest" --stacktrace
 
 Expected: FAIL because the account DTOs and mapper do not exist.
 
-- [ ] **Step 3: Add the domain contracts**
+- [x] **Step 3: Add the domain contracts**
 
 Implement exactly:
 
@@ -178,7 +178,7 @@ interface RedBusAccountRepository {
 }
 ```
 
-- [ ] **Step 4: Implement DTOs from the approved fixtures**
+- [x] **Step 4: Implement DTOs from the approved fixtures**
 
 Model only fields needed to identify `error`, the external card number,
 description, type, state, and wallets. Gson must ignore all account PII and
