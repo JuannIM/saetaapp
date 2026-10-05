@@ -16,7 +16,7 @@ La versión para Android (`android/`) fue diseñada e implementada desde cero co
 | **Resolución de Captcha** | Scraping manual / Redirige a Safari al fallar | **On-Device OCR con Google ML Kit**: Descarga `/captcha.png`, binariza la imagen y resuelve el código alfanumérico en ~50ms sin enviar datos a servidores externos, con 3 reintentos silenciosos y diálogo de fallback manual. |
 | **Widget de Escritorio** | No disponible (limitado por sandbox de iOS) | **Jetpack Glance Widget**: Muestra el saldo actualizado directamente en la pantalla de inicio con botón de refresco de 1 toque. |
 | **Conectividad con RedBus** | Bloqueos por App Transport Security (ATS) ante certificados del portal | **Network Security Config**: Configuración segura de certificados para `salta.miredbus.com.ar` y sesión `JSESSIONID` retenida en memoria. |
-| **Persistencia y Métricas** | `UserDefaults` simple (solo último valor) | **Room Database**: Historial completo de variaciones de saldo, estimación inteligente de viajes restantes (regulares + 2 boletos de emergencia) y editor de tarifa. |
+| **Persistencia y Métricas** | `UserDefaults` simple (solo último valor) | **Room Database**: Historial completo de variaciones de saldo, estimación inteligente de viajes restantes según la tarifa vigente y editor de tarifa. |
 
 ---
 
@@ -59,7 +59,7 @@ android/
 │   │           ├── SaetaBalanceWidget.kt        # UI interactiva en Glance
 │   │           ├── SaetaBalanceWidgetReceiver.kt# Receptor AppWidgetProvider
 │   │           └── RefreshBalanceAction.kt      # Actualización en background con 1 toque
-│   └── src/test/                                # 54 pruebas unitarias automatizadas
+│   └── src/test/                                # 61 pruebas unitarias automatizadas
 ```
 
 ---
@@ -101,16 +101,14 @@ El portal `salta.miredbus.com.ar` no ofrece una API REST pública documentada. D
 ## 📱 Pantallas de la Aplicación Android
 
 1. **Mis Tarjetas (`CardsScreen`):**
-   - Tarjetas diseñadas como plásticos físicos digitales con gradientes institucionales:
-     - **Azul Común:** Gradiente `#0D47A1` a `#1976D2`.
-     - **Verde Beneficiario (Jubilados / Estudiantes / Pase Libre):** Gradiente `#1B5E20` a `#388E3C`.
+   - Tarjetas diseñadas como plásticos físicos digitales con el gradiente azul institucional de SAETA (`#0D47A1` a `#1976D2`), sin pedir ni mostrar una categoría de usuario.
    - Tipografía grande de saldo (`$ 1.500,00`), número impreso y badges de tarjeta favorita y NFC vinculado.
    - Gesto Pull-to-Refresh para actualización masiva.
    - Botón de Acción Flotante (FAB) para escanear nueva tarjeta vía NFC.
 
 2. **Detalle de Tarjeta (`CardDetailScreen`):**
    - Encabezado ampliado con acciones rápidas: fijar como tarjeta del Widget de escritorio y botón de refresco.
-   - **Estimador Inteligente de Viajes:** Calcula cuántos boletos cubre el saldo actual con tarifa configurable (soporta coma y punto decimal: `690,00`), contemplando los 2 boletos de saldo negativo de emergencia para tarjetas azules.
+   - **Estimador Inteligente de Viajes:** Calcula cuántos boletos cubre el saldo actual con tarifa configurable (valor por defecto `1450,00`; el campo acepta coma o punto decimal). La estimación se basa estrictamente en el saldo disponible y marca aparte si la tarjeta quedó en saldo negativo.
    - **Historial de Variaciones:** Registro cronológico de variaciones de saldo con badges diferenciales (`+ $...` / `- $...`).
    - Edición de nombre y eliminación de tarjeta.
 
