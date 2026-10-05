@@ -33,7 +33,15 @@ jobs:
       - name: Run Unit Tests
         run: |
           cd android
-          gradle test --stacktrace
+          gradle testDebugUnitTest --stacktrace
+
+      - name: Upload Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-test-reports
+          path: android/app/build/reports/tests/
+          retention-days: 14
 
       - name: Build Debug APK
         run: |
