@@ -1013,7 +1013,7 @@ git commit -m "feat: wire optional RedBus sessions into Android"
 **Interfaces:**
 - Produces: accurate public disclosure of the optional external account flow.
 
-- [ ] **Step 1: Write failing privacy-content assertions**
+- [x] **Step 1: Write failing privacy-content assertions**
 
 Add assertions that the in-app policy:
 
@@ -1036,7 +1036,7 @@ gradle testDebugUnitTest --tests "*PrivacyPolicyContentTest" --stacktrace
 
 Expected: FAIL against the current policy text.
 
-- [ ] **Step 3: Update user-facing and store privacy documentation**
+- [x] **Step 3: Update user-facing and store privacy documentation**
 
 Replace the badge with:
 
