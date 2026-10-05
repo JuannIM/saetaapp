@@ -866,7 +866,7 @@ git commit -m "refactor: coordinate bulk balance refreshes"
 - Produces: account action in the cards top bar.
 - Produces: accessible connect, sync, and disconnect controls.
 
-- [ ] **Step 1: Implement the account dialog**
+- [x] **Step 1: Implement the account dialog**
 
 Define:
 
@@ -886,7 +886,7 @@ that SAETA Saldo does not read or save the password. Connected copy must state
 that only linked cards and their principal monetary balance are synchronized.
 Do not claim endorsement or official affiliation.
 
-- [ ] **Step 2: Expose the account action from `CardsScreen`**
+- [x] **Step 2: Expose the account action from `CardsScreen`**
 
 Add parameters:
 
