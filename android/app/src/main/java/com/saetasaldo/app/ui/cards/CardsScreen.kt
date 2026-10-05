@@ -69,6 +69,7 @@ fun CardsScreen(
     onConnectRedBus: () -> Unit = {},
     onSyncRedBus: () -> Unit = {},
     onDisconnectRedBus: () -> Unit = {},
+    onAccountMessageConsumed: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val cards by viewModel.cards.collectAsState()
@@ -264,7 +265,10 @@ fun CardsScreen(
             },
             onSync = onSyncRedBus,
             onDisconnect = onDisconnectRedBus,
-            onDismiss = { showAccountDialog = false }
+            onDismiss = {
+                showAccountDialog = false
+                onAccountMessageConsumed()
+            }
         )
     }
 }

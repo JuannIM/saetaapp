@@ -948,7 +948,7 @@ git commit -m "feat: expose optional RedBus account controls"
 - Produces: `Screen.RedBusLogin` in the existing manual navigation model.
 - Preserves: anonymous widget refresh.
 
-- [ ] **Step 1: Wire dependencies once in `MainActivity`**
+- [x] **Step 1: Wire dependencies once in `MainActivity`**
 
 Create one instance each of:
 
@@ -965,7 +965,7 @@ RedBusAccountViewModel
 Construct `GetCardBalanceUseCase` with both repositories and construct
 `CardsViewModel` with the bulk coordinator. Do not introduce a DI framework.
 
-- [ ] **Step 2: Add the login screen state**
+- [x] **Step 2: Add the login screen state**
 
 Extend the existing sealed `Screen` with `RedBusLogin`. From the cards screen:
 
@@ -975,7 +975,7 @@ Extend the existing sealed `Screen` with `RedBusLogin`. From the cards screen:
 - Back cancels login without deleting an already-valid session.
 - App startup calls `checkExistingSession()` once.
 
-- [ ] **Step 3: Keep the widget anonymous**
+- [x] **Step 3: Keep the widget anonymous**
 
 Change `RefreshBalanceAction` to call the existing
 `CardRepository.refreshCardBalance` directly rather than constructing the now

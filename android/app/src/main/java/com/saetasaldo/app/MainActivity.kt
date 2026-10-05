@@ -24,6 +24,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,13 +39,22 @@ import com.saetasaldo.app.data.local.SaetaDatabase
 import com.saetasaldo.app.data.nfc.AndroidNfcManager
 import com.saetasaldo.app.data.ocr.MlKitCaptchaSolver
 import com.saetasaldo.app.data.remote.NetworkClient
+import com.saetasaldo.app.data.remote.RedBusAccountNetworkClient
+import com.saetasaldo.app.data.remote.cookie.AndroidWebCookieStore
+import com.saetasaldo.app.data.remote.cookie.WebViewCookieJar
 import com.saetasaldo.app.data.repository.CardRepositoryImpl
+import com.saetasaldo.app.data.repository.RedBusAccountRepositoryImpl
+import com.saetasaldo.app.domain.model.RedBusSessionState
 import com.saetasaldo.app.domain.model.SaetaCard
 import com.saetasaldo.app.domain.repository.CardRepository
 import com.saetasaldo.app.domain.usecase.GetCardBalanceUseCase
 import com.saetasaldo.app.domain.usecase.NfcScanResult
 import com.saetasaldo.app.domain.usecase.ProcessNfcScanUseCase
+import com.saetasaldo.app.domain.usecase.RefreshAllBalancesUseCase
 import com.saetasaldo.app.domain.usecase.SolveCaptchaUseCase
+import com.saetasaldo.app.domain.usecase.SyncRedBusCardsUseCase
+import com.saetasaldo.app.ui.account.RedBusAccountViewModel
+import com.saetasaldo.app.ui.account.RedBusLoginScreen
 import com.saetasaldo.app.ui.cards.CardsScreen
 import com.saetasaldo.app.ui.cards.CardsViewModel
 import com.saetasaldo.app.ui.detail.CardDetailScreen
@@ -57,6 +67,7 @@ import kotlinx.coroutines.launch
 sealed interface Screen {
     data object CardsList : Screen
     data class CardDetail(val cardId: String) : Screen
+    data object RedBusLogin : Screen
 }
 
 data class NewCardPromptState(
@@ -71,6 +82,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var processNfcScanUseCase: ProcessNfcScanUseCase
     private lateinit var getCardBalanceUseCase: GetCardBalanceUseCase
     private lateinit var cardsViewModel: CardsViewModel
+    private lateinit var redBusAccountViewModel: RedBusAccountViewModel
 
     private val scannedTagFlow = MutableSharedFlow<String>(replay = 1, extraBufferCapacity = 1)
     private var captchaSolver: MlKitCaptchaSolver? = null
@@ -86,14 +98,24 @@ class MainActivity : ComponentActivity() {
         repository = CardRepositoryImpl(db.cardDao(), db.balanceHistoryDao(), NetworkClient.apiService, solveCaptchaUseCase)
 
         processNfcScanUseCase = ProcessNfcScanUseCase(repository)
-        getCardBalanceUseCase = GetCardBalanceUseCase(repository)
-        cardsViewModel = CardsViewModel(repository, getCardBalanceUseCase)
+
+        val webCookieStore = AndroidWebCookieStore()
+        val accountCookieJar = WebViewCookieJar(RedBusAccountNetworkClient.HOST, webCookieStore)
+        val accountApiService = RedBusAccountNetworkClient.create(accountCookieJar)
+        val accountRepository = RedBusAccountRepositoryImpl(accountApiService, accountCookieJar)
+        val syncRedBusCardsUseCase = SyncRedBusCardsUseCase(repository)
+        val refreshAllBalancesUseCase = RefreshAllBalancesUseCase(repository, accountRepository, syncRedBusCardsUseCase)
+        redBusAccountViewModel = RedBusAccountViewModel(accountRepository, syncRedBusCardsUseCase)
+
+        getCardBalanceUseCase = GetCardBalanceUseCase(repository, accountRepository)
+        cardsViewModel = CardsViewModel(repository, getCardBalanceUseCase, refreshAllBalancesUseCase)
 
         setContent {
             SaetaSaldoTheme {
                 Surface(color = MaterialTheme.colorScheme.background) {
                     SaetaAppContent(
                         cardsViewModel = cardsViewModel,
+                        redBusAccountViewModel = redBusAccountViewModel,
                         repository = repository,
                         processNfcScanUseCase = processNfcScanUseCase,
                         getCardBalanceUseCase = getCardBalanceUseCase,
@@ -157,6 +179,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun SaetaAppContent(
     cardsViewModel: CardsViewModel,
+    redBusAccountViewModel: RedBusAccountViewModel,
     repository: CardRepository,
     processNfcScanUseCase: ProcessNfcScanUseCase,
     getCardBalanceUseCase: GetCardBalanceUseCase,
@@ -170,6 +193,12 @@ fun SaetaAppContent(
     var newCardPrompt by remember { mutableStateOf<NewCardPromptState?>(null) }
     val coroutineScope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState()
+    val accountState by redBusAccountViewModel.uiState.collectAsState()
+
+    // One-shot check for an existing RedBus session; never syncs on its own.
+    LaunchedEffect(Unit) {
+        redBusAccountViewModel.checkExistingSession()
+    }
 
     // Handle NFC tag scanned events
     LaunchedEffect(Unit) {
@@ -201,7 +230,12 @@ fun SaetaAppContent(
                 onScanNfcClick = {
                     showNfcBottomSheet = true
                 },
-                isNfcSupported = isNfcSupported
+                isNfcSupported = isNfcSupported,
+                redBusAccountState = accountState,
+                onConnectRedBus = { currentScreen = Screen.RedBusLogin },
+                onSyncRedBus = { redBusAccountViewModel.sync() },
+                onDisconnectRedBus = { redBusAccountViewModel.disconnect() },
+                onAccountMessageConsumed = { redBusAccountViewModel.consumeMessage() }
             )
         }
 
@@ -221,6 +255,22 @@ fun SaetaAppContent(
                 onBackClick = {
                     currentScreen = Screen.CardsList
                 }
+            )
+        }
+
+        is Screen.RedBusLogin -> {
+            // Return to cards once the session is verified. Backing out keeps
+            // an already-valid session; it is never disconnected here.
+            LaunchedEffect(accountState.sessionState) {
+                if (accountState.sessionState == RedBusSessionState.Connected) {
+                    currentScreen = Screen.CardsList
+                }
+            }
+            RedBusLoginScreen(
+                isVerifying = accountState.isSyncing ||
+                    accountState.sessionState == RedBusSessionState.Checking,
+                onVerifySession = { redBusAccountViewModel.verifyLoginAndSync() },
+                onBack = { currentScreen = Screen.CardsList }
             )
         }
     }
