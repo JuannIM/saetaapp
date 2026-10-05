@@ -707,7 +707,7 @@ git commit -m "feat: model RedBus account connection state"
 - Produces: `isAllowedRedBusMainFrame(uri): Boolean`.
 - Produces: `RedBusLoginScreen(isVerifying, onVerifySession, onBack)`.
 
-- [ ] **Step 1: Write failing security-policy tests**
+- [x] **Step 1: Write failing security-policy tests**
 
 Add tests:
 
@@ -735,7 +735,7 @@ gradle testDebugUnitTest --tests "*RedBusWebViewSecurityTest" --stacktrace
 
 Expected: FAIL because the security helper is absent.
 
-- [ ] **Step 3: Implement the WebView security policy**
+- [x] **Step 3: Implement the WebView security policy**
 
 `configureRedBusLoginWebView` must:
 
@@ -749,7 +749,7 @@ Never add: JavaScript interfaces or WebMessage bridges.
 `isAllowedRedBusMainFrame` accepts only scheme `https` and exact host
 `salta.miredbus.com.ar`, case-insensitively after URI parsing.
 
-- [ ] **Step 4: Implement the Compose login screen**
+- [x] **Step 4: Implement the Compose login screen**
 
 Load:
 
@@ -802,7 +802,7 @@ git commit -m "feat: add secure official RedBus login screen"
 - Changes: `refreshAllBalances()` delegates one operation instead of looping
   and delaying in the ViewModel.
 
-- [ ] **Step 1: Write the failing delegation tests**
+- [x] **Step 1: Write the failing delegation tests**
 
 Replace the loop-specific test with:
 
@@ -823,7 +823,7 @@ gradle testDebugUnitTest --tests "*CardsViewModelTest" --stacktrace
 
 Expected: FAIL because the ViewModel does not receive the coordinator.
 
-- [ ] **Step 3: Delegate the bulk operation**
+- [x] **Step 3: Delegate the bulk operation**
 
 Inject:
 
