@@ -1084,12 +1084,12 @@ git commit -m "docs: disclose optional RedBus account privacy"
 - Changes ADR status from `Propuesto` to `Aceptado` only after implementation
   and review.
 
-- [ ] **Step 1: Document both balance modes**
+- [x] **Step 1: Document both balance modes**
 
 Update the README with the optional account workflow, anonymous fallback,
 principal-wallet limitation, and the independent/non-official disclaimer.
 
-- [ ] **Step 2: Mark the ADR accepted**
+- [x] **Step 2: Mark the ADR accepted**
 
 Change the ADR only after the implementation and tests match the decision.
 

@@ -37,20 +37,28 @@ android/
 │   │       ├── MainActivity.kt                  # Single-Activity Compose host y despacho NFC
 │   │       ├── domain/                          # Modelos de negocio y Casos de Uso puros
 │   │       │   ├── model/                       # SaetaCard, CardType, BalanceRecord, TripEstimate
-│   │       │   ├── repository/                  # CardRepository (interfaz)
+│   │       │   ├── repository/                  # CardRepository, RedBusAccountRepository (interfaces)
 │   │       │   └── usecase/
 │   │       │       ├── CalculateRemainingTripsUseCase.kt
 │   │       │       ├── GetCardBalanceUseCase.kt
 │   │       │       ├── ProcessNfcScanUseCase.kt
-│   │       │       └── SolveCaptchaUseCase.kt
+│   │       │       ├── RefreshAllBalancesUseCase.kt
+│   │       │       ├── SolveCaptchaUseCase.kt
+│   │       │       └── SyncRedBusCardsUseCase.kt
 │   │       ├── data/                            # Implementación de datos y proveedores
 │   │       │   ├── local/                       # Room DB: SaetaDatabase, DAOs, Entities, Converters
-│   │       │   ├── remote/                      # Retrofit + OkHttp: SaetaApiService, SessionCookieJar
+│   │       │   ├── remote/                      # Retrofit + OkHttp
+│   │       │   │   ├── api/                     # SaetaApiService (anónimo), RedBusAccountApiService (cuenta)
+│   │       │   │   ├── cookie/                  # SessionCookieJar (anónimo), WebViewCookieJar/WebCookieStore (cuenta)
+│   │       │   │   ├── dto/                     # SaldoRequestDto/SaldoResponseDto, RedBusAccountDtos
+│   │       │   │   ├── NetworkClient.kt         # Cliente OkHttp del flujo anónimo
+│   │       │   │   └── RedBusAccountNetworkClient.kt  # Cliente OkHttp dedicado a la sesión de cuenta
 │   │       │   ├── ocr/                         # Google ML Kit OCR & Preprocesador Binarizador
 │   │       │   ├── nfc/                         # AndroidNfcManager (Foreground & Background dispatch)
-│   │       │   └── repository/                  # CardRepositoryImpl (orquestación y sincronización)
+│   │       │   └── repository/                  # CardRepositoryImpl, RedBusAccountRepositoryImpl
 │   │       ├── ui/                              # Capa de presentación Jetpack Compose
 │   │       │   ├── theme/                       # Material 3 tokens: Color (Azul/Verde SAETA, Oro), Theme
+│   │       │   ├── account/                     # RedBusLoginScreen (WebView), RedBusAccountDialog, RedBusAccountViewModel
 │   │       │   ├── cards/                       # CardsScreen, CardsViewModel, SaetaCardItem
 │   │       │   ├── detail/                      # CardDetailScreen, CardDetailViewModel
 │   │       │   ├── nfc/                         # NfcScanBottomSheet (onda radar animada)
@@ -59,7 +67,7 @@ android/
 │   │           ├── SaetaBalanceWidget.kt        # UI interactiva en Glance
 │   │           ├── SaetaBalanceWidgetReceiver.kt# Receptor AppWidgetProvider
 │   │           └── RefreshBalanceAction.kt      # Actualización en background con 1 toque
-│   └── src/test/                                # 61 pruebas unitarias automatizadas
+│   └── src/test/                                # 160 pruebas unitarias automatizadas
 ```
 
 ---
@@ -96,6 +104,19 @@ El portal `salta.miredbus.com.ar` no ofrece una API REST pública documentada. D
      ```
    - Códigos de respuesta: `0 = Éxito`, `1 = Captcha inválido`, `2 = Tarjeta inexistente`.
 
+### Flujo autenticado opcional (cuenta RedBus)
+
+Además del flujo anónimo, el usuario puede conectar de forma **opcional** su cuenta RedBus. El inicio de sesión se realiza en un **WebView endurecido** que carga el formulario oficial de `salta.miredbus.com.ar` (con Cloudflare Turnstile): la app no implementa un formulario nativo de credenciales, no inspecciona el DOM ni agrega puentes JavaScript (`addJavascriptInterface`). Las cookies de sesión se comparten únicamente a través de `CookieManager` hacia un cliente OkHttp dedicado, aislado del cliente anónimo.
+
+Endpoints internos utilizados una vez autenticado:
+
+- `GET https://salta.miredbus.com.ar/rest/loginInternal/usuarioLogeado`
+  - Verificación de sesión: `error: 0` = sesión activa, `error: 1` = no autenticado.
+- `GET https://salta.miredbus.com.ar/rest/tarjetaInternal/listaTarjetas`
+  - Lista las tarjetas vinculadas a la cuenta con sus monederos; solo se importa el saldo del monedero **`Principal (Dinero)`** (nunca beneficios ni boletos gratuitos). Responde `error: 99` cuando no hay sesión autenticada.
+
+La desconexión es **local**: elimina las cookies del `CookieManager` y conserva intactas las tarjetas guardadas. Estos endpoints son **internos y no documentados** por RedBus, por lo que pueden cambiar sin previo aviso; ante cualquier falla o cambio de contrato, la app recurre automáticamente al flujo anónimo de captcha/OCR.
+
 ---
 
 ## 📱 Pantallas de la Aplicación Android
@@ -120,6 +141,11 @@ El portal `salta.miredbus.com.ar` no ofrece una API REST pública documentada. D
 4. **Verificación Manual de Seguridad (`FallbackCaptchaDialog`):**
    - Diálogo modal de contingencia si el motor OCR local agota sus 3 reintentos silenciosos.
    - Presenta la imagen del captcha en pantalla con botón para regenerarlo y campo de texto con auto-capitalización.
+
+5. **Cuenta RedBus Opcional (`RedBusLoginScreen` + `RedBusAccountDialog`):**
+   - Inicio de sesión en el sitio oficial de RedBus dentro de un WebView endurecido (JavaScript y DOM storage para Turnstile, sin puente JavaScript, navegación principal limitada a HTTPS en el host exacto).
+   - Sincronización de las tarjetas vinculadas a la cuenta con el saldo del monedero `Principal (Dinero)`, sin captcha por cada consulta.
+   - El modo anónimo (captcha/OCR + NFC) permanece intacto como alternativa y como fallback automático ante sesiones expiradas o fallas del contrato.
 
 ---
 
