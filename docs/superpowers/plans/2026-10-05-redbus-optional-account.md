@@ -536,7 +536,7 @@ git commit -m "feat: prefer authenticated card balances"
 - Produces: one authenticated list request per bulk refresh, followed only by
   anonymous requests for uncovered local cards.
 
-- [ ] **Step 1: Write failing synchronization tests**
+- [x] **Step 1: Write failing synchronization tests**
 
 Add tests:
 
@@ -561,7 +561,7 @@ gradle testDebugUnitTest --tests "*SyncRedBusCardsUseCaseTest" --tests "*Refresh
 
 Expected: FAIL because both use cases are absent.
 
-- [ ] **Step 3: Implement linked-card synchronization**
+- [x] **Step 3: Implement linked-card synchronization**
 
 Define:
 
@@ -581,7 +581,7 @@ valid card. Compute `importedCount` from a pre-update
 `cardRepository.getAllCards().first()` snapshot; do not add another repository
 lookup method only for this count.
 
-- [ ] **Step 4: Implement bulk orchestration**
+- [x] **Step 4: Implement bulk orchestration**
 
 Define:
 
