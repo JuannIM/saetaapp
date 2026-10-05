@@ -470,7 +470,7 @@ git commit -m "refactor: centralize card balance persistence"
 - Preserves: `invoke(cardNumber, manualCaptcha): Result<SaetaCard>`.
 - Produces: authenticated-first lookup with anonymous fallback.
 
-- [ ] **Step 1: Replace delegation-only tests with decision tests**
+- [x] **Step 1: Replace delegation-only tests with decision tests**
 
 Add tests:
 
@@ -495,7 +495,7 @@ gradle testDebugUnitTest --tests "*GetCardBalanceUseCaseTest" --stacktrace
 
 Expected: FAIL because the use case has no account repository.
 
-- [ ] **Step 3: Implement the fixed decision order**
+- [x] **Step 3: Implement the fixed decision order**
 
 Keep the public operator signature unchanged. Inject
 `RedBusAccountRepository`. Match normalized external card numbers exactly.
