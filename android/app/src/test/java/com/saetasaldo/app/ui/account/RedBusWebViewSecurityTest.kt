@@ -77,7 +77,12 @@ class RedBusWebViewSecurityTest {
     }
 
     @Test
-    fun `configuration keeps safe browsing enabled`() = configuredWebView { webView ->
-        assertTrue(webView.settings.safeBrowsingEnabled)
+    fun `manifest keeps WebView safe browsing enabled`() {
+        val app = RuntimeEnvironment.getApplication()
+        val info = app.packageManager.getApplicationInfo(
+            app.packageName,
+            android.content.pm.PackageManager.GET_META_DATA
+        )
+        assertTrue(info.metaData.getBoolean("android.webkit.WebView.EnableSafeBrowsing"))
     }
 }

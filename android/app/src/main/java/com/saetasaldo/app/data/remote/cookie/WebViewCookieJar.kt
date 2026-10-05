@@ -40,6 +40,9 @@ class WebViewCookieJar(
         val separator = pair.indexOf('=')
         require(separator > 0) { "cookie pair lacks name/value separator" }
         val name = pair.substring(0, separator).trim()
+        require(name.all { it.code in 0x21..0x7E && it !in "\"(),/:;<=>?@[\\]{} \t" }) {
+            "cookie name is not a valid token"
+        }
         val value = pair.substring(separator + 1)
         return Cookie.Builder()
             .name(name)

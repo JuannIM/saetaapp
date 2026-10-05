@@ -29,7 +29,8 @@ object RedBusWebViewSecurity {
             allowFileAccessFromFileURLs = false
             allowUniversalAccessFromFileURLs = false
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
-            safeBrowsingEnabled = true
+            // Safe Browsing is declared in the manifest (EnableSafeBrowsing
+            // meta-data); the setter was removed in SDK 35.
         }
         val cookieManager = CookieManager.getInstance()
         cookieManager.setAcceptCookie(true)

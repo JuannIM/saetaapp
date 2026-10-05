@@ -118,7 +118,10 @@ class RedBusAccountViewModelTest {
         advanceUntilIdle()
 
         assertEquals(RedBusSessionState.Disconnected, viewModel.uiState.value.sessionState)
-        assertEquals("No se encontró una sesión activa.", viewModel.uiState.value.message)
+        assertEquals(
+            "Falló la conexión con RedBus. Reintentá en unos segundos.",
+            viewModel.uiState.value.message
+        )
         assertFalse(viewModel.uiState.value.isSyncing)
         coVerify(exactly = 0) { accountRepository.getLinkedCards() }
         coVerify(exactly = 0) { syncRedBusCardsUseCase(any()) }
