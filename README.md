@@ -103,6 +103,7 @@ El portal `salta.miredbus.com.ar` no ofrece una API REST pública documentada. D
      }
      ```
    - Códigos de respuesta: `0 = Éxito`, `1 = Captcha inválido`, `2 = Tarjeta inexistente`.
+   - **Modo Turnstile (preferido):** cuando no hay captcha manual, la app primero obtiene el sitekey público con `GET /rest/getTurnstileKeySite`, resuelve un token de Cloudflare Turnstile en un WebView fuera de pantalla sobre el dominio oficial y envía `X-Use-New-Captcha: true` con el token en `verificacionCaptcha`. Si el token falla o es rechazado (`error: 1`), se recurre automáticamente al captcha de imagen con OCR local y, como último recurso, al diálogo manual.
 
 ### Flujo autenticado opcional (cuenta RedBus)
 

@@ -17,7 +17,7 @@ object PrivacyPolicyContent {
         ),
         PolicySection(
             title = "3. Reconocimiento de Captcha en el Dispositivo",
-            content = "La resolución automática de códigos captcha se procesa íntegramente de forma local mediante Google ML Kit Text Recognition en tu propio teléfono. Las imágenes nunca se suben ni se comparten con servicios externos."
+            content = "La resolución automática de códigos captcha se procesa íntegramente de forma local mediante Google ML Kit Text Recognition en tu propio teléfono. Las imágenes nunca se suben ni se comparten con servicios externos. Además, la app puede resolver la verificación ejecutando un desafío de Cloudflare Turnstile en un WebView interno sobre el dominio oficial de MiRedBus; no intervienen credenciales ni datos personales."
         ),
         PolicySection(
             title = "4. Permisos Requeridos",

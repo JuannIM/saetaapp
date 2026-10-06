@@ -266,13 +266,13 @@ and prepare a human-reviewed feature branch.
 in an offscreen WebView — works for every card, no account required.
 
 **Acceptance criteria:**
-- [ ] `GET /rest/getTurnstileKeySite` returns the plaintext sitekey.
-- [ ] `resultadoSaldo` is called with `X-Use-New-Captcha: true` + token.
-- [ ] Token path success never requests `captcha.png` nor runs OCR.
-- [ ] Token failure/error 1/network failure falls back to OCR, then manual.
-- [ ] Manual captcha bypasses the provider entirely.
-- [ ] Widget path never creates the WebView provider.
-- [ ] WebView destroyed on completion/cancellation; TLS errors cancel.
+- [x] `GET /rest/getTurnstileKeySite` returns the plaintext sitekey.
+- [x] `resultadoSaldo` is called with `X-Use-New-Captcha: true` + token.
+- [x] Token path success never requests `captcha.png` nor runs OCR.
+- [x] Token failure/error 1/network failure falls back to OCR, then manual.
+- [x] Manual captcha bypasses the provider entirely.
+- [x] Widget path never creates the WebView provider.
+- [x] WebView destroyed on completion/cancellation; TLS errors cancel.
 
 **Verification:**
 - [ ] `gradle testDebugUnitTest --tests "*CardRepositoryTest" --stacktrace`

@@ -57,6 +57,14 @@ class PrivacyPolicyContentTest {
     }
 
     @Test
+    fun `policy discloses the anonymous Turnstile challenge in a WebView`() {
+        val text = allPolicyText()
+        assertTrue(text.contains("Turnstile"))
+        assertTrue(text.contains("Cloudflare", ignoreCase = true))
+        assertTrue(text.contains("WebView"))
+    }
+
+    @Test
     fun `policy does not claim no accounts exist`() {
         val text = allPolicyText()
         assertFalse(text.contains("Sin Cuentas", ignoreCase = true))

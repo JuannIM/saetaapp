@@ -47,6 +47,7 @@ import com.saetasaldo.app.data.repository.RedBusAccountRepositoryImpl
 import com.saetasaldo.app.domain.model.RedBusSessionState
 import com.saetasaldo.app.domain.model.SaetaCard
 import com.saetasaldo.app.domain.repository.CardRepository
+import com.saetasaldo.app.domain.repository.TurnstileTokenProvider
 import com.saetasaldo.app.domain.usecase.GetCardBalanceUseCase
 import com.saetasaldo.app.domain.usecase.NfcScanResult
 import com.saetasaldo.app.domain.usecase.ProcessNfcScanUseCase
@@ -61,6 +62,7 @@ import com.saetasaldo.app.ui.detail.CardDetailScreen
 import com.saetasaldo.app.ui.detail.CardDetailViewModel
 import com.saetasaldo.app.ui.nfc.NfcScanBottomSheet
 import com.saetasaldo.app.ui.theme.SaetaSaldoTheme
+import com.saetasaldo.app.ui.turnstile.WebViewTurnstileTokenProvider
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 
@@ -87,6 +89,13 @@ class MainActivity : ComponentActivity() {
     private val scannedTagFlow = MutableSharedFlow<String>(replay = 1, extraBufferCapacity = 1)
     private var captchaSolver: MlKitCaptchaSolver? = null
 
+    // Offscreen WebView that resolves the anonymous Turnstile captcha. Only the
+    // app-facing repository gets it: the widget builds its own provider-less
+    // repository so it never touches a WebView in a cold process.
+    private val turnstileProvider: TurnstileTokenProvider by lazy {
+        WebViewTurnstileTokenProvider(applicationContext, NetworkClient.apiService)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -95,7 +104,13 @@ class MainActivity : ComponentActivity() {
         val db = SaetaDatabase.getInstance(this)
         val solver = MlKitCaptchaSolver().also { captchaSolver = it }
         val solveCaptchaUseCase = SolveCaptchaUseCase(NetworkClient.apiService, solver)
-        repository = CardRepositoryImpl(db.cardDao(), db.balanceHistoryDao(), NetworkClient.apiService, solveCaptchaUseCase)
+        repository = CardRepositoryImpl(
+            db.cardDao(),
+            db.balanceHistoryDao(),
+            NetworkClient.apiService,
+            solveCaptchaUseCase,
+            turnstileProvider
+        )
 
         processNfcScanUseCase = ProcessNfcScanUseCase(repository)
 

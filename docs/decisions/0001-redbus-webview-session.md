@@ -133,6 +133,30 @@ Se debe reconsiderar si RedBus publica OAuth o un mecanismo de deep link.
 - Fallback seguro ante sesion vencida, red o cambio de esquema.
 - Revision de los terminos del proveedor antes de distribucion publica.
 
+## Addendum — Turnstile WebView (2026-10-05)
+
+`WebViewTurnstileTokenProvider` introduce un segundo WebView, fuera de
+pantalla, que resuelve el captcha anonimo de `resultadoSaldo` ejecutando el
+desafio Turnstile del portal y enviando el token con `X-Use-New-Captcha: true`.
+
+A diferencia del WebView de login, este lleva un puente JavaScript unidireccional
+(`@JavascriptInterface` `AndroidTurnstile.onToken`/`onError`): es la unica via
+para que el desafio devuelva el token a Kotlin. Se acepta aqui porque la pagina
+cargada es la publica y anonima `https://salta.miredbus.com.ar/` — no se ingresan
+credenciales ni se inspecciona una sesion autenticada — y porque el main frame
+sigue limitado al host exacto por HTTPS, los errores TLS cancelan la carga y el
+WebView se destruye al finalizar cada intento (exito, error, timeout o
+cancelacion). El sitekey se obtiene de `GET /rest/getTurnstileKeySite` y se
+valida contra una lista blanca antes de inyectarlo en el script.
+
+El WebView de login sigue prohibiendo cualquier puente nativo o inspeccion del
+DOM: ahi si circulan credenciales y cookies de sesion.
+
+El widget nunca construye este provider: mantiene el repositorio sin Turnstile
+y el flujo captcha/OCR. Si el token falla, es rechazado (`error: 1`) o la red
+falla, la consulta degrada al captcha de imagen con OCR y luego al ingreso
+manual.
+
 ## Referencias
 
 - `docs/superpowers/specs/2026-10-05-redbus-optional-account-design.md`

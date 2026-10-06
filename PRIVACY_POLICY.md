@@ -47,6 +47,7 @@ La aplicación únicamente realiza conexiones de red salientes hacia los servido
 - **Destino:** Servidor oficial de RedBus Salta (`https://salta.miredbus.com.ar`).
 - **Seguridad:** Todas las comunicaciones se realizan de forma obligatoria mediante **cifrado TLS 1.2 / TLS 1.3 (HTTPS)**. El tráfico en texto plano (`cleartext HTTP`) está expresamente deshabilitado a nivel del sistema operativo mediante [`network_security_config.xml`](android/app/src/main/res/xml/network_security_config.xml).
 - **Carga Útil (modo anónimo):** La solicitud únicamente envía los parámetros técnicos requeridos por el servicio de consulta: número de tarjeta y texto del captcha resuelto. **No se envían identificadores del dispositivo (Android ID, IMEI, IMSI, dirección MAC ni ID de Publicidad de Google)**.
+- **Desafío Turnstile (modo anónimo):** Para resolver la verificación automáticamente, la app puede ejecutar un desafío de Cloudflare Turnstile dentro de un WebView interno fuera de pantalla sobre el dominio oficial `salta.miredbus.com.ar` — el mismo desafío que el portal ejecuta en un navegador. No intervienen credenciales ni datos personales; si el desafío falla se recurre al captcha de imagen con OCR local.
 
 ### 4.1 Conexión Opcional con Cuenta RedBus (Inicio de Sesión Web)
 
@@ -106,7 +107,7 @@ El código fuente completo de la aplicación es público y auditable por cualqui
 
 - **Local-First:** All card data, aliases, and balance logs are stored 100% on-device in a local SQLite database. The developer runs no external servers or cloud services of its own.
 - **Zero Trackers:** No analytics, advertising, or telemetry SDKs are included.
-- **Direct Queries:** HTTPS queries are made directly from your phone to `salta.miredbus.com.ar`. No device identifiers or personal info are transmitted.
+- **Direct Queries:** HTTPS queries are made directly from your phone to `salta.miredbus.com.ar`. No device identifiers or personal info are transmitted. Anonymous balance queries may run a Cloudflare Turnstile challenge inside an offscreen in-app WebView on the official domain — no credentials involved.
 - **Optional RedBus Account:** You may optionally log in on the official RedBus site inside a hardened in-app WebView. Credentials go straight to the official page — the app never reads or stores your password. Portal session cookies stay in the app's private CookieManager, are sent only to `salta.miredbus.com.ar`, and are deleted when you disconnect. Without an account, anonymous captcha mode works exactly the same.
 - **On-Device OCR:** Captchas are processed locally on your phone using Google ML Kit. No images are sent to the cloud.
 - **Data Deletion:** Deleting a card wipes all its associated history immediately. Disconnecting the account removes the portal session cookies; your local cards and history remain. Uninstalling the app permanently purges all local data.

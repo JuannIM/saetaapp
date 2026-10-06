@@ -10,6 +10,7 @@ import com.saetasaldo.app.data.remote.dto.SaldoRequestDto
 import com.saetasaldo.app.data.remote.dto.SaldoResponseDto
 import com.saetasaldo.app.domain.model.CardBalanceUpdate
 import com.saetasaldo.app.domain.model.CardType
+import com.saetasaldo.app.domain.repository.TurnstileTokenProvider
 import com.saetasaldo.app.domain.usecase.SolveCaptchaUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -437,5 +438,173 @@ class CardRepositoryTest {
         assertEquals("ACTIVA", slot.captured.cardState)
         assertEquals(900.0, slot.captured.currentBalance ?: 0.0, 0.01)
         coVerify(exactly = 1) { balanceHistoryDao.insertRecord(match { it.balance == 900.0 && it.difference == 0.0 }) }
+    }
+
+    // --- Turnstile token path ---
+
+    private val turnstileProvider = mockk<TurnstileTokenProvider>()
+
+    private fun repositoryWithTurnstile() = CardRepositoryImpl(
+        cardDao = cardDao,
+        balanceHistoryDao = balanceHistoryDao,
+        apiService = apiService,
+        solveCaptchaUseCase = solveCaptchaUseCase,
+        turnstileProvider = turnstileProvider
+    )
+
+    @Test
+    fun `refreshCardBalance resolves turnstile token and never requests captcha image or OCR`() = runBlocking {
+        val repository = repositoryWithTurnstile()
+        coEvery { turnstileProvider.getToken() } returns Result.success("TURNSTILE-TOKEN")
+        val successDto = SaldoResponseDto(
+            error = 0,
+            cardNumber = "123456",
+            balances = listOf(SaldoItemDto(amount = 700.0))
+        )
+        coEvery {
+            apiService.queryBalanceWithToken(SaldoRequestDto("123456", "TURNSTILE-TOKEN"), "true")
+        } returns Response.success(successDto)
+        coEvery { cardDao.getCardByNumber("123456") } returns null
+        coEvery { balanceHistoryDao.getLatestBalanceRecord(any()) } returns null
+
+        val result = repository.refreshCardBalance("123456")
+
+        assertTrue(result.isSuccess)
+        assertEquals(700.0, result.getOrNull()?.currentBalance ?: 0.0, 0.01)
+        coVerify(exactly = 1) { turnstileProvider.getToken() }
+        coVerify(exactly = 1) {
+            apiService.queryBalanceWithToken(SaldoRequestDto("123456", "TURNSTILE-TOKEN"), "true")
+        }
+        coVerify(exactly = 0) { apiService.getCaptchaImage(any()) }
+        coVerify(exactly = 0) { solveCaptchaUseCase.invoke() }
+        coVerify(exactly = 0) { apiService.queryBalance(any()) }
+    }
+
+    @Test
+    fun `refreshCardBalance returns card-not-found from token path without OCR retry`() = runBlocking {
+        val repository = repositoryWithTurnstile()
+        coEvery { turnstileProvider.getToken() } returns Result.success("TURNSTILE-TOKEN")
+        coEvery {
+            apiService.queryBalanceWithToken(any(), any())
+        } returns Response.success(SaldoResponseDto(error = 2))
+
+        val result = repository.refreshCardBalance("999999")
+
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull()?.message?.contains("no existe") == true)
+        coVerify(exactly = 0) { solveCaptchaUseCase.invoke() }
+        coVerify(exactly = 0) { apiService.getCaptchaImage(any()) }
+    }
+
+    @Test
+    fun `refreshCardBalance falls back to OCR when provider fails`() = runBlocking {
+        val repository = repositoryWithTurnstile()
+        coEvery { turnstileProvider.getToken() } returns Result.failure(
+            IllegalStateException("Turnstile timeout")
+        )
+        coEvery { solveCaptchaUseCase.invoke() } returns Result.success("ABCD")
+        val successDto = SaldoResponseDto(
+            error = 0,
+            cardNumber = "123456",
+            balances = listOf(SaldoItemDto(amount = 800.0))
+        )
+        coEvery { apiService.queryBalance(any()) } returns Response.success(successDto)
+        coEvery { cardDao.getCardByNumber("123456") } returns null
+        coEvery { balanceHistoryDao.getLatestBalanceRecord(any()) } returns null
+
+        val result = repository.refreshCardBalance("123456")
+
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 1) { turnstileProvider.getToken() }
+        coVerify(exactly = 0) { apiService.queryBalanceWithToken(any(), any()) }
+        coVerify(exactly = 1) { solveCaptchaUseCase.invoke() }
+        coVerify(exactly = 1) { apiService.queryBalance(SaldoRequestDto("123456", "ABCD")) }
+    }
+
+    @Test
+    fun `refreshCardBalance falls back to OCR when token is rejected with error 1`() = runBlocking {
+        val repository = repositoryWithTurnstile()
+        coEvery { turnstileProvider.getToken() } returns Result.success("STALE-TOKEN")
+        coEvery {
+            apiService.queryBalanceWithToken(any(), any())
+        } returns Response.success(SaldoResponseDto(error = 1))
+        coEvery { solveCaptchaUseCase.invoke() } returns Result.success("ABCD")
+        val successDto = SaldoResponseDto(
+            error = 0,
+            cardNumber = "123456",
+            balances = listOf(SaldoItemDto(amount = 600.0))
+        )
+        coEvery { apiService.queryBalance(any()) } returns Response.success(successDto)
+        coEvery { cardDao.getCardByNumber("123456") } returns null
+        coEvery { balanceHistoryDao.getLatestBalanceRecord(any()) } returns null
+
+        val result = repository.refreshCardBalance("123456")
+
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 1) { apiService.queryBalanceWithToken(any(), "true") }
+        coVerify(exactly = 1) { solveCaptchaUseCase.invoke() }
+        coVerify(exactly = 1) { apiService.queryBalance(SaldoRequestDto("123456", "ABCD")) }
+    }
+
+    @Test
+    fun `refreshCardBalance falls back to OCR when token query fails on HTTP`() = runBlocking {
+        val repository = repositoryWithTurnstile()
+        coEvery { turnstileProvider.getToken() } returns Result.success("TURNSTILE-TOKEN")
+        val errorBody = "Internal Server Error".toResponseBody("text/plain".toMediaType())
+        coEvery {
+            apiService.queryBalanceWithToken(any(), any())
+        } returns Response.error(500, errorBody)
+        coEvery { solveCaptchaUseCase.invoke() } returns Result.success("ABCD")
+        val successDto = SaldoResponseDto(
+            error = 0,
+            cardNumber = "123456",
+            balances = listOf(SaldoItemDto(amount = 400.0))
+        )
+        coEvery { apiService.queryBalance(any()) } returns Response.success(successDto)
+        coEvery { cardDao.getCardByNumber("123456") } returns null
+        coEvery { balanceHistoryDao.getLatestBalanceRecord(any()) } returns null
+
+        val result = repository.refreshCardBalance("123456")
+
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 1) { solveCaptchaUseCase.invoke() }
+        coVerify(exactly = 1) { apiService.queryBalance(SaldoRequestDto("123456", "ABCD")) }
+    }
+
+    @Test
+    fun `refreshCardBalance with manual captcha never calls turnstile provider`() = runBlocking {
+        val repository = repositoryWithTurnstile()
+        val successDto = SaldoResponseDto(
+            error = 0,
+            cardNumber = "123456",
+            balances = listOf(SaldoItemDto(amount = 500.0))
+        )
+        coEvery { apiService.queryBalance(SaldoRequestDto("123456", "MANUAL12")) } returns Response.success(successDto)
+        coEvery { cardDao.getCardByNumber("123456") } returns null
+
+        val result = repository.refreshCardBalance("123456", manualCaptcha = "MANUAL12")
+
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 0) { turnstileProvider.getToken() }
+        coVerify(exactly = 0) { apiService.queryBalanceWithToken(any(), any()) }
+        coVerify(exactly = 1) { apiService.queryBalance(SaldoRequestDto("123456", "MANUAL12")) }
+    }
+
+    @Test
+    fun `refreshCardBalance propagates provider CancellationException without wrapping`() {
+        val repository = repositoryWithTurnstile()
+        coEvery { turnstileProvider.getToken() } throws CancellationException("Cancelled")
+
+        try {
+            runBlocking {
+                repository.refreshCardBalance("123456")
+            }
+            fail("Expected CancellationException")
+        } catch (e: CancellationException) {
+            assertEquals("Cancelled", e.message)
+        }
+
+        coVerify(exactly = 0) { solveCaptchaUseCase.invoke() }
+        coVerify(exactly = 0) { apiService.queryBalance(any()) }
     }
 }
