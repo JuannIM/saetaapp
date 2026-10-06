@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -40,7 +41,14 @@ fun SaetaCardItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val gradient = Brush.horizontalGradient(listOf(SaetaBluePrimary, SaetaBlueSecondary))
+    val customColor = card.colorArgb?.let { Color(it) }
+    val gradient = Brush.horizontalGradient(
+        if (customColor != null) {
+            listOf(customColor, lerp(customColor, Color.Black, 0.35f))
+        } else {
+            listOf(SaetaBluePrimary, SaetaBlueSecondary)
+        }
+    )
 
     Card(
         modifier = modifier
@@ -93,7 +101,7 @@ fun SaetaCardItem(
 
                 Column(modifier = Modifier.padding(vertical = 12.dp)) {
                     Text(
-                        text = card.currentBalance?.let { String.format(Locale.getDefault(), "$ %.2f", it) } ?: "$ --",
+                        text = card.formattedBalance(),
                         color = Color.White,
                         fontSize = 32.sp,
                         fontWeight = FontWeight.ExtraBold

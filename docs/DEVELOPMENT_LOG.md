@@ -85,3 +85,80 @@ cuenta.
 - Posible mejora: mostrar WebView de Turnstile brevemente si el desafío exige
   interacción; hoy degrada a OCR tras el timeout.
 - Build de release firmado con keystore propio para Play Store.
+
+---
+
+# 2026-10-06 — Monederos, cargas pendientes, colores, widget y Wear OS
+
+## Contexto
+
+Auditoría en vivo del portal `salta.miredbus.com.ar` con una sesión real de
+cuenta beneficiaria universitaria. Hallazgos que condicionaron el diseño:
+
+- `listaTarjetas` devuelve un único monedero `Principal (Dinero)` incluso para
+  tarjetas con beneficio activo — el saldo de boletos gratis **no** llega como
+  monedero separado.
+- `/rest/beneficio/?consultarBeneficio` (el request exacto que emite la página
+  oficial de beneficios) devuelve **HTTP 500** para una beneficiaria real — el
+  propio portal no puede mostrar el beneficio. Es un bug server-side, no un
+  problema de firma del endpoint.
+- Lo que SÍ expone el backend: `monedero.unidadPasajes`, `prefijoSaldo` y
+  `sufijoSaldo` — la tarjeta beneficiaria declaró `sufijoSaldo: " pasajes"` y
+  `unidadPasajes: true` sobre su monedero principal.
+- Firmas reales verificadas con sesión:
+  `GET /rest/tarjetaInternal/showTransactions/{nroInterno}` y
+  `GET /rest/tarjetaInternal/cargaspendientes/{nroInterno}`
+  (`{"error":0,"cargasPendientes":[],"mensaje":"Sin cargas pendientes"}`).
+
+## Decisiones
+
+- **Formato de saldo autoritativo del backend**: la app renderiza
+  `prefijoSaldo + monto + sufijoSaldo` (`formattedBalance()` en `CardWallet`).
+  Para la tarjeta real muestra `3170 pasajes`; para monederos de dinero,
+  `$ 1450.50`. La consulta anónima (sin metadatos de monedero) conserva el
+  formato monetario de siempre.
+- **`CardWallet` + `SaetaCard.wallets`**: se persisten TODOS los monederos del
+  `saldos[]` (serializados JSON en `walletsJson`). Si el backend empieza a
+  devolver un monedero de beneficio, la sección "Otros monederos" del detalle
+  lo renderiza sin más cambios — diseño defensivo, nada inventado.
+- **`nroInterno` persistido**: los endpoints internos (`cargaspendientes`,
+  `showTransactions`) toman el número interno, no el impreso. Solo existe para
+  tarjetas vinculadas a cuenta; tarjetas anónimas quedan en `null`.
+- **Cargas pendientes**: se consultan al entrar al detalle cuando la tarjeta
+  tiene `nroInterno` y la sesión está conectada. Lista vacía → no se muestra
+  nada (sin ruido).
+- **Migración Room 1→2**: `ALTER TABLE cards` agrega `colorArgb`,
+  `internalNumber`, `walletsJson` — todas nullables, datos preservados.
+- **Colores**: paleta fija de 8 colores oscuros (`CardColorPalette`) que
+  mantienen contraste con texto blanco; `lerp(color, Black, 0.35)` genera el
+  segundo extremo del gradiente. `colorArgb == null` = azul SAETA de siempre.
+- **Widget opaco**: `appWidgetBackground()` + `background(GlanceTheme.colors
+  .background)` + `cornerRadius`, y botón "Abrir" con `actionStartActivity`
+  hacia `MainActivity`. "Refrescar" sigue igual.
+- **Wear OS**: módulo `:wear` separado (`com.saetasaldo.wear`, minSdk 30).
+  El teléfono pushea `PutDataMapRequest` en `/saeta/balance` (urgente) cada vez
+  que cambia la tarjeta favorita — observer en `MainActivity` + push explícito
+  tras refrescos de widget y de la request del reloj. El reloj pide refresh con
+  `MessageClient` en `/saeta/refresh` → `PhoneWearListenerService` corre el
+  camino anónimo (mismo que el widget: sin WebView en proceso frío) y responde
+  con el snapshot nuevo.
+
+## Lo que NO se implementó (y por qué)
+
+- **Contador de boletos gratis / estado del beneficio**: no existe endpoint
+  funcional — `/rest/beneficio/` falla con 500 incluso para beneficiarias
+  reales en el portal oficial. Mostrarlo sería inventar datos.
+- **`posicionesBuses`**: excluido explícitamente del alcance.
+- **`showTransactions`** (historial de viajes): la firma está verificada pero
+  la respuesta real vino `error:6`/`monederos:null` — endpoint existe pero el
+  backend no sirve datos hoy. Queda identificado para una iteración futura.
+
+## Verificación
+
+- `gradle :app:testDebugUnitTest` — 190 tests verdes (locales, Robolectric).
+- `gradle :app:assembleDebug :wear:assembleDebug` — ambos APK compilan.
+- Nueva cobertura: `CardWalletTest` (formato prefijo/sufijo), fixtures
+  `RedBusAccountDtosTest` (metadata de monedero, multi-monedero, cargas
+  pendientes), `CardRepositoryTest` (persistencia de `internalNumber`/wallets
+  y preservación en refresh anónimo), `SaetaDatabaseMigrationTest` (1→2 con
+  SQLite real).

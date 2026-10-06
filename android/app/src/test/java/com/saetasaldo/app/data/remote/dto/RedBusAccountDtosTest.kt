@@ -314,4 +314,156 @@ class RedBusAccountDtosTest {
         assertEquals("ACTIVA", cards[0].cardState)
         assertNull(cards[0].cardType)
     }
+
+    @Test
+    fun `maps wallet metadata including passage unit prefix and suffix`() {
+        val json = """
+            {
+                "error": 0,
+                "tarjetas": [
+                    {
+                        "nroInterno": "14671CB2",
+                        "description": "Mi tarjeta",
+                        "tarjetaDatosAdicionales": {
+                            "saldos": [
+                                {
+                                    "saldo": 3170,
+                                    "monedero": {
+                                        "id": 0,
+                                        "unidadPasajes": true,
+                                        "nombre": "Principal (Dinero)",
+                                        "prefijoSaldo": "",
+                                        "sufijoSaldo": " pasajes"
+                                    }
+                                }
+                            ],
+                            "tipoTarjeta": "COMUN",
+                            "codExterno": 11217513
+                        }
+                    }
+                ]
+            }
+        """.trimIndent()
+
+        val cards = gson.fromJson(json, RedBusCardListDto::class.java).toDomainCards()
+
+        assertEquals(1, cards.size)
+        val card = cards[0]
+        assertEquals("14671CB2", card.internalNumber)
+        assertEquals(3170.0, card.balance, 0.001)
+        assertEquals(1, card.wallets.size)
+        val wallet = card.wallets[0]
+        assertEquals("Principal (Dinero)", wallet.name)
+        assertEquals(true, wallet.isPassageUnit)
+        assertEquals(" pasajes", wallet.suffix)
+        assertEquals("3170 pasajes", wallet.formattedBalance())
+    }
+
+    @Test
+    fun `preserves non-principal wallets alongside principal balance`() {
+        val json = """
+            {
+                "error": 0,
+                "tarjetas": [
+                    {
+                        "nroInterno": "90000009",
+                        "description": "Con beneficio",
+                        "tarjetaDatosAdicionales": {
+                            "saldos": [
+                                {
+                                    "saldo": 30,
+                                    "monedero": {
+                                        "nombre": "Boleto Estudiantil",
+                                        "unidadPasajes": true,
+                                        "sufijoSaldo": " pasajes"
+                                    }
+                                },
+                                {
+                                    "saldo": 1450.5,
+                                    "monedero": {
+                                        "nombre": "Principal (Dinero)",
+                                        "unidadPasajes": false,
+                                        "prefijoSaldo": "$"
+                                    }
+                                }
+                            ],
+                            "tipoTarjeta": "COMUN",
+                            "codExterno": 12345678
+                        }
+                    }
+                ]
+            }
+        """.trimIndent()
+
+        val cards = gson.fromJson(json, RedBusCardListDto::class.java).toDomainCards()
+
+        assertEquals(1, cards.size)
+        assertEquals(1450.5, cards[0].balance, 0.001)
+        assertEquals(2, cards[0].wallets.size)
+        val benefit = cards[0].wallets.first { it.name == "Boleto Estudiantil" }
+        assertEquals("30 pasajes", benefit.formattedBalance())
+    }
+
+    @Test
+    fun `malformed wallet entry is dropped but card and siblings survive`() {
+        val json = """
+            {
+                "error": 0,
+                "tarjetas": [
+                    {
+                        "nroInterno": "90000010",
+                        "tarjetaDatosAdicionales": {
+                            "saldos": [
+                                { "saldo": null, "monedero": null },
+                                {
+                                    "saldo": 1450.5,
+                                    "monedero": { "nombre": "Principal (Dinero)" }
+                                }
+                            ],
+                            "codExterno": 12345678
+                        }
+                    }
+                ]
+            }
+        """.trimIndent()
+
+        val cards = gson.fromJson(json, RedBusCardListDto::class.java).toDomainCards()
+
+        assertEquals(1, cards.size)
+        assertEquals(1, cards[0].wallets.size)
+        assertEquals(1450.5, cards[0].balance, 0.001)
+    }
+
+    @Test
+    fun `empty pending loads fixture parses to empty list`() {
+        val dto = gson.fromJson(
+            """{"error":0,"cargasPendientes":[],"mensaje":"Sin cargas pendientes"}""",
+            RedBusPendingLoadsDto::class.java
+        )
+        assertEquals(0, dto.error)
+        assertTrue(dto.toDomainLoads().isEmpty())
+    }
+
+    @Test
+    fun `pending loads map amount description and date`() {
+        val dto = gson.fromJson(
+            """{"error":0,"cargasPendientes":[{"monto":500.0,"descripcion":"Carga virtual","fecha":"2026-10-01"}],"mensaje":null}""",
+            RedBusPendingLoadsDto::class.java
+        )
+        val loads = dto.toDomainLoads()
+        assertEquals(1, loads.size)
+        assertEquals(500.0, loads[0].amount ?: 0.0, 0.01)
+        assertEquals("Carga virtual", loads[0].description)
+        assertEquals("2026-10-01", loads[0].date)
+    }
+
+    @Test
+    fun `pending loads with error returns empty`() {
+        val dto = gson.fromJson(
+            """{"error":1,"cargasPendientes":[{"monto":500.0}]}""",
+            RedBusPendingLoadsDto::class.java
+        )
+        assertTrue(dto.toDomainLoads().isEmpty())
+    }
 }
+

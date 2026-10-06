@@ -47,6 +47,7 @@ import com.saetasaldo.app.data.repository.RedBusAccountRepositoryImpl
 import com.saetasaldo.app.domain.model.RedBusSessionState
 import com.saetasaldo.app.domain.model.SaetaCard
 import com.saetasaldo.app.domain.repository.CardRepository
+import com.saetasaldo.app.domain.repository.RedBusAccountRepository
 import com.saetasaldo.app.domain.repository.TurnstileTokenProvider
 import com.saetasaldo.app.domain.usecase.GetCardBalanceUseCase
 import com.saetasaldo.app.domain.usecase.NfcScanResult
@@ -63,6 +64,7 @@ import com.saetasaldo.app.ui.detail.CardDetailViewModel
 import com.saetasaldo.app.ui.nfc.NfcScanBottomSheet
 import com.saetasaldo.app.ui.theme.SaetaSaldoTheme
 import com.saetasaldo.app.ui.turnstile.WebViewTurnstileTokenProvider
+import com.saetasaldo.app.wear.WearSyncManager
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 
@@ -132,6 +134,7 @@ class MainActivity : ComponentActivity() {
                         cardsViewModel = cardsViewModel,
                         redBusAccountViewModel = redBusAccountViewModel,
                         repository = repository,
+                        accountRepository = accountRepository,
                         processNfcScanUseCase = processNfcScanUseCase,
                         getCardBalanceUseCase = getCardBalanceUseCase,
                         isNfcSupported = nfcManager.isNfcSupported,
@@ -196,6 +199,7 @@ fun SaetaAppContent(
     cardsViewModel: CardsViewModel,
     redBusAccountViewModel: RedBusAccountViewModel,
     repository: CardRepository,
+    accountRepository: RedBusAccountRepository,
     processNfcScanUseCase: ProcessNfcScanUseCase,
     getCardBalanceUseCase: GetCardBalanceUseCase,
     isNfcSupported: Boolean,
@@ -213,6 +217,15 @@ fun SaetaAppContent(
     // One-shot check for an existing RedBus session; never syncs on its own.
     LaunchedEffect(Unit) {
         redBusAccountViewModel.checkExistingSession()
+    }
+
+    // Push the favorite card snapshot to paired watches whenever it changes.
+    val context = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(Unit) {
+        val sync = WearSyncManager(context)
+        repository.getAllCards().collect { cards ->
+            sync.pushFavoriteCard(cards.firstOrNull { it.isFavorite })
+        }
     }
 
     // Handle NFC tag scanned events
@@ -262,7 +275,8 @@ fun SaetaAppContent(
                 CardDetailViewModel(
                     cardId = screen.cardId,
                     repository = repository,
-                    getCardBalanceUseCase = getCardBalanceUseCase
+                    getCardBalanceUseCase = getCardBalanceUseCase,
+                    accountRepository = accountRepository
                 )
             }
             CardDetailScreen(

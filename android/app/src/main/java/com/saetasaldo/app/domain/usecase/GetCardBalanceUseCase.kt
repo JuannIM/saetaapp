@@ -27,7 +27,9 @@ class GetCardBalanceUseCase(
                                 balance = match.balance,
                                 cardType = match.cardType,
                                 cardState = match.cardState,
-                                suggestedName = match.suggestedName
+                                suggestedName = match.suggestedName,
+                                internalNumber = match.internalNumber,
+                                wallets = match.wallets
                             )
                         )
                     )

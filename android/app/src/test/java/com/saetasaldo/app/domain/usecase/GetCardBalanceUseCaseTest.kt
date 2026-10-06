@@ -99,7 +99,9 @@ class GetCardBalanceUseCaseTest {
                     balance = 2500.0,
                     cardType = CardType.VERDE_BENEFICIARIO,
                     cardState = "Activa",
-                    suggestedName = "Sube Trabajo"
+                    suggestedName = "Sube Trabajo",
+                    internalNumber = null,
+                    wallets = emptyList()
                 )
             )
         }

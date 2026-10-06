@@ -158,13 +158,19 @@ class CardRepositoryImpl(
         val remoteState = update.cardState?.trim()?.takeIf { it.isNotEmpty() }
         val suggestedName = update.suggestedName?.trim()?.takeIf { it.isNotEmpty() }
 
+        // Wallet metadata is only supplied by the authenticated account path;
+        // an anonymous refresh must not wipe wallets stored by a prior sync.
+        val walletsJson = update.wallets?.let { CardEntity.encodeWallets(it) }
+
         val existing = cardDao.getCardByNumber(cardNumber)
         val updated = if (existing != null) {
             existing.copy(
                 currentBalance = update.balance,
                 lastUpdated = System.currentTimeMillis(),
                 cardState = remoteState ?: existing.cardState,
-                type = update.cardType ?: existing.type
+                type = update.cardType ?: existing.type,
+                internalNumber = update.internalNumber ?: existing.internalNumber,
+                walletsJson = walletsJson ?: existing.walletsJson
             )
         } else {
             CardEntity(
@@ -173,7 +179,9 @@ class CardRepositoryImpl(
                 type = update.cardType ?: CardType.AZUL_COMUN,
                 currentBalance = update.balance,
                 lastUpdated = System.currentTimeMillis(),
-                cardState = remoteState
+                cardState = remoteState,
+                internalNumber = update.internalNumber,
+                walletsJson = walletsJson
             )
         }
 

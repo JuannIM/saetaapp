@@ -46,12 +46,12 @@ class SyncRedBusCardsUseCaseTest {
 
         coVerify(exactly = 1) {
             cardRepository.applyBalanceUpdate(
-                CardBalanceUpdate("12345678", 100.0, CardType.AZUL_COMUN, "Activa", "Personal")
+                CardBalanceUpdate("12345678", 100.0, CardType.AZUL_COMUN, "Activa", "Personal", null, emptyList())
             )
         }
         coVerify(exactly = 1) {
             cardRepository.applyBalanceUpdate(
-                CardBalanceUpdate("87654321", 300.0, null, null, "Trabajo")
+                CardBalanceUpdate("87654321", 300.0, null, null, "Trabajo", null, emptyList())
             )
         }
         coVerify(exactly = 2) { cardRepository.applyBalanceUpdate(any()) }

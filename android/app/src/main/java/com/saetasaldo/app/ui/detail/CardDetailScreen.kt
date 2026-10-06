@@ -1,6 +1,7 @@
 package com.saetasaldo.app.ui.detail
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DirectionsBus
 import androidx.compose.material.icons.filled.Edit
@@ -62,9 +64,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.saetasaldo.app.domain.model.BalanceRecord
+import com.saetasaldo.app.domain.model.CardWallet
+import com.saetasaldo.app.domain.model.PendingLoad
 import com.saetasaldo.app.domain.model.TripEstimate
+import com.saetasaldo.app.domain.model.extraWallets
 import com.saetasaldo.app.ui.cards.components.SaetaCardItem
 import com.saetasaldo.app.ui.dialogs.FallbackCaptchaDialog
+import com.saetasaldo.app.ui.theme.CardColorPalette
 import com.saetasaldo.app.ui.theme.SaetaBluePrimary
 import com.saetasaldo.app.ui.theme.SaetaGold
 import com.saetasaldo.app.ui.theme.SaetaGreenPrimary
@@ -87,6 +93,7 @@ fun CardDetailScreen(
     val errorMessage by viewModel.errorMessage.collectAsState()
     val showCaptchaDialog by viewModel.showFallbackCaptchaDialog.collectAsState()
     val captchaBitmap by viewModel.captchaBitmap.collectAsState()
+    val pendingLoads by viewModel.pendingLoads.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
     var showRenameDialog by remember { mutableStateOf(false) }
@@ -241,7 +248,22 @@ fun CardDetailScreen(
                     )
                 }
 
-                // 4. Balance History Header
+                // 4. Pending virtual loads (account-linked cards only)
+                if (!pendingLoads.isNullOrEmpty()) {
+                    item {
+                        PendingLoadsSection(loads = pendingLoads.orEmpty())
+                    }
+                }
+
+                // 5. Extra wallets — benefit wallets the backend may expose
+                val extraWallets = currentCard.wallets.extraWallets
+                if (extraWallets.isNotEmpty()) {
+                    item {
+                        ExtraWalletsSection(wallets = extraWallets)
+                    }
+                }
+
+                // 6. Balance History Header
                 item {
                     Text(
                         text = "Historial de Variaciones",
@@ -251,7 +273,7 @@ fun CardDetailScreen(
                     )
                 }
 
-                // 5. Balance History Items or Empty State
+                // 7. Balance History Items or Empty State
                 if (history.isEmpty()) {
                     item {
                         Card(
@@ -278,25 +300,60 @@ fun CardDetailScreen(
         }
     }
 
-    // Rename Dialog
+    // Edit Dialog (name + color)
     if (showRenameDialog && card != null) {
         var newName by remember { mutableStateOf(card?.name.orEmpty()) }
+        var selectedColor by remember { mutableStateOf(card?.colorArgb) }
         AlertDialog(
             onDismissRequest = { showRenameDialog = false },
-            title = { Text("Editar nombre") },
+            title = { Text("Editar tarjeta") },
             text = {
-                OutlinedTextField(
-                    value = newName,
-                    onValueChange = { newName = it },
-                    label = { Text("Nombre de la tarjeta") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Column {
+                    OutlinedTextField(
+                        value = newName,
+                        onValueChange = { newName = it },
+                        label = { Text("Nombre de la tarjeta") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Color de la tarjeta",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        CardColorPalette.forEach { argb ->
+                            val isSelected = selectedColor == argb.toInt() ||
+                                (selectedColor == null && argb == CardColorPalette.first())
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .background(
+                                        color = Color(argb),
+                                        shape = RoundedCornerShape(16.dp)
+                                    )
+                                    .clickable { selectedColor = argb.toInt() },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             },
             confirmButton = {
                 Button(
                     onClick = {
                         viewModel.updateCardName(newName)
+                        viewModel.updateCardColor(selectedColor)
                         showRenameDialog = false
                     }
                 ) {
@@ -556,6 +613,88 @@ private fun BalanceHistoryItem(
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Bold
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PendingLoadsSection(
+    loads: List<PendingLoad>,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onTertiaryContainer
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Cargas pendientes de acreditación",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            loads.forEach { load ->
+                val detail = listOfNotNull(
+                    load.amount?.let { String.format(Locale.getDefault(), "$ %.2f", it) },
+                    load.description,
+                    load.date
+                ).joinToString(" · ").ifEmpty { "Carga pendiente" }
+                Text(
+                    text = "• $detail",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExtraWalletsSection(
+    wallets: List<CardWallet>,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Otros monederos",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            wallets.forEach { wallet ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = wallet.name ?: "Monedero",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = wallet.formattedBalance(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
     }

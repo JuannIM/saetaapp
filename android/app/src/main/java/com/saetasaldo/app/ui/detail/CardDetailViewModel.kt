@@ -3,9 +3,12 @@ package com.saetasaldo.app.ui.detail
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.saetasaldo.app.domain.model.BalanceRecord
+import com.saetasaldo.app.domain.model.PendingLoad
+import com.saetasaldo.app.domain.model.RedBusSessionState
 import com.saetasaldo.app.domain.model.SaetaCard
 import com.saetasaldo.app.domain.model.TripEstimate
 import com.saetasaldo.app.domain.repository.CardRepository
+import com.saetasaldo.app.domain.repository.RedBusAccountRepository
 import com.saetasaldo.app.domain.usecase.CalculateRemainingTripsUseCase
 import com.saetasaldo.app.domain.usecase.GetCardBalanceUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,8 +30,28 @@ class CardDetailViewModel(
     private val repository: CardRepository,
     private val getCardBalanceUseCase: GetCardBalanceUseCase,
     private val calculateRemainingTripsUseCase: CalculateRemainingTripsUseCase = CalculateRemainingTripsUseCase(),
-    private val apiService: SaetaApiService? = null
+    private val apiService: SaetaApiService? = null,
+    private val accountRepository: RedBusAccountRepository? = null
 ) : ViewModel() {
+
+    private val _pendingLoads = MutableStateFlow<List<PendingLoad>?>(null)
+    val pendingLoads: StateFlow<List<PendingLoad>?> = _pendingLoads.asStateFlow()
+
+    init {
+        // Pending virtual loads only exist for account-linked cards.
+        viewModelScope.launch {
+            card.collect { current ->
+                val nroInterno = current?.internalNumber
+                if (nroInterno != null &&
+                    accountRepository?.sessionState?.value == RedBusSessionState.Connected
+                ) {
+                    _pendingLoads.value = accountRepository.getPendingLoads(nroInterno).getOrNull()
+                } else if (nroInterno == null) {
+                    _pendingLoads.value = null
+                }
+            }
+        }
+    }
 
     val card: StateFlow<SaetaCard?> = repository.getAllCards()
         .map { list -> list.firstOrNull { it.id == cardId } }
@@ -132,6 +155,13 @@ class CardDetailViewModel(
         viewModelScope.launch {
             repository.deleteCard(currentCard)
             onDeleted()
+        }
+    }
+
+    fun updateCardColor(colorArgb: Int?) {
+        val currentCard = card.value ?: return
+        viewModelScope.launch {
+            repository.saveCard(currentCard.copy(colorArgb = colorArgb))
         }
     }
 

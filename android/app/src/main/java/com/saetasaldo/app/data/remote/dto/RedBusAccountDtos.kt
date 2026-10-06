@@ -3,9 +3,9 @@ package com.saetasaldo.app.data.remote.dto
 import com.google.gson.JsonElement
 import com.google.gson.annotations.SerializedName
 import com.saetasaldo.app.domain.model.CardType
+import com.saetasaldo.app.domain.model.CardWallet
+import com.saetasaldo.app.domain.model.PendingLoad
 import com.saetasaldo.app.domain.model.RedBusAccountCard
-
-private const val PRINCIPAL_WALLET_NAME = "Principal (Dinero)"
 
 private val NUMBER_TOKEN_REGEX = Regex("""-?\s*\d[\d.,]*""")
 
@@ -53,8 +53,38 @@ data class RedBusAccountBalanceDto(
 )
 
 data class RedBusWalletDto(
+    @SerializedName("id")
+    val id: Int?,
     @SerializedName("nombre")
-    val name: String?
+    val name: String?,
+    @SerializedName("unidadPasajes")
+    val isPassageUnit: Boolean?,
+    @SerializedName("prefijoSaldo")
+    val balancePrefix: String?,
+    @SerializedName("sufijoSaldo")
+    val balanceSuffix: String?
+)
+
+data class RedBusPendingLoadsDto(
+    @SerializedName("error")
+    val error: Int?,
+    @SerializedName("mensaje")
+    val message: String?,
+    @SerializedName("cargasPendientes")
+    val pendingLoads: List<RedBusPendingLoadDto>?
+)
+
+/**
+ * Shape inferred from the portal contract; every field is optional because the
+ * verified capture only contained an empty list.
+ */
+data class RedBusPendingLoadDto(
+    @SerializedName("monto")
+    val amount: JsonElement?,
+    @SerializedName("descripcion")
+    val description: String?,
+    @SerializedName("fecha")
+    val date: String?
 )
 
 fun RedBusCardListDto.toDomainCards(): List<RedBusAccountCard> {
@@ -74,19 +104,43 @@ private fun RedBusCardDto.toDomainCard(): RedBusAccountCard? {
         ?.takeIf { it.isNotEmpty() }
         ?: return null
 
-    val principalBalance = additional.balances.orEmpty().firstOrNull { entry ->
-        entry.wallet?.name?.trim().equals(PRINCIPAL_WALLET_NAME, ignoreCase = true)
-    } ?: return null
-
-    val balance = parseBalanceAmount(principalBalance.balance) ?: return null
+    val wallets = additional.balances.orEmpty().mapNotNull { it.toDomainWallet() }
+    val balance = wallets.firstOrNull {
+        it.name.equals(CardWallet.PRINCIPAL_WALLET_NAME, ignoreCase = true)
+    }?.balance ?: return null
 
     return RedBusAccountCard(
         cardNumber = cardNumber,
         balance = balance,
         cardType = additional.cardType.trimToNull()?.let { CardType.fromBackendString(it) },
         cardState = additional.cardState.trimToNull() ?: cardState.trimToNull(),
-        suggestedName = description?.trim()?.takeIf { it.isNotEmpty() }
+        suggestedName = description?.trim()?.takeIf { it.isNotEmpty() },
+        internalNumber = internalNumber.trimToNull(),
+        wallets = wallets
     )
+}
+
+private fun RedBusAccountBalanceDto.toDomainWallet(): CardWallet? {
+    val amount = parseBalanceAmount(balance) ?: return null
+    return CardWallet(
+        id = wallet?.id,
+        name = wallet?.name.trimToNull(),
+        balance = amount,
+        isPassageUnit = wallet?.isPassageUnit == true,
+        prefix = wallet?.balancePrefix.orEmpty(),
+        suffix = wallet?.balanceSuffix.orEmpty()
+    )
+}
+
+fun RedBusPendingLoadsDto.toDomainLoads(): List<PendingLoad> {
+    if (error != 0) return emptyList()
+    return pendingLoads.orEmpty().map {
+        PendingLoad(
+            amount = parseBalanceAmount(it.amount),
+            description = it.description.trimToNull(),
+            date = it.date.trimToNull()
+        )
+    }
 }
 
 private fun parseBalanceAmount(element: JsonElement?): Double? {

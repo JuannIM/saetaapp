@@ -9,6 +9,7 @@ import com.saetasaldo.app.data.ocr.MlKitCaptchaSolver
 import com.saetasaldo.app.data.remote.NetworkClient
 import com.saetasaldo.app.data.repository.CardRepositoryImpl
 import com.saetasaldo.app.domain.usecase.SolveCaptchaUseCase
+import com.saetasaldo.app.wear.WearSyncManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -24,6 +25,8 @@ class RefreshBalanceAction : ActionCallback {
                 // Anonymous path only: the account-aware use case would touch
                 // WebView session state in a cold widget process.
                 repo.refreshCardBalance(favorite.cardNumber)
+
+                WearSyncManager(context).pushFavoriteCard(repo.getFavoriteCard())
 
                 SaetaBalanceWidget().update(context, glanceId)
             }

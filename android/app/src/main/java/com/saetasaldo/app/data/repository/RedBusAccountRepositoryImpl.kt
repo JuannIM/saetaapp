@@ -8,6 +8,8 @@ import com.saetasaldo.app.data.remote.RedBusSessionExpiredException
 import com.saetasaldo.app.data.remote.api.RedBusAccountApiService
 import com.saetasaldo.app.data.remote.cookie.WebViewCookieJar
 import com.saetasaldo.app.data.remote.dto.toDomainCards
+import com.saetasaldo.app.data.remote.dto.toDomainLoads
+import com.saetasaldo.app.domain.model.PendingLoad
 import com.saetasaldo.app.domain.model.RedBusAccountCard
 import com.saetasaldo.app.domain.model.RedBusSessionState
 import com.saetasaldo.app.domain.repository.RedBusAccountRepository
@@ -84,6 +86,36 @@ class RedBusAccountRepositoryImpl(
                     }
                     body.error == 0 && body.cards != null ->
                         Result.success(body.toDomainCards())
+                    else -> Result.failure(RedBusContractException())
+                }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: IOException) {
+            Result.failure(RedBusNetworkException(e))
+        } catch (e: Exception) {
+            Result.failure(RedBusContractException(e))
+        }
+    }
+
+    override suspend fun getPendingLoads(internalNumber: String): Result<List<PendingLoad>> {
+        if (_sessionState.value != RedBusSessionState.Connected) {
+            return Result.failure(RedBusNotConnectedException())
+        }
+        return try {
+            val response = apiService.getPendingLoads(internalNumber)
+            if (!response.isSuccessful) {
+                response.errorBody()?.close()
+                Result.failure(RedBusHttpException(response.code()))
+            } else {
+                val body = response.body()
+                when {
+                    body == null -> Result.failure(RedBusContractException())
+                    body.error == 1 || body.error == 99 -> {
+                        _sessionState.value = RedBusSessionState.Disconnected
+                        Result.failure(RedBusSessionExpiredException())
+                    }
+                    body.error == 0 -> Result.success(body.toDomainLoads())
                     else -> Result.failure(RedBusContractException())
                 }
             }

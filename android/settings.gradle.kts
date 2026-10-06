@@ -14,3 +14,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "SAETASaldoAndroid"
 include(":app")
+include(":wear")

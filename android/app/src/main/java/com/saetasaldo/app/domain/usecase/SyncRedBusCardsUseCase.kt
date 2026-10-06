@@ -28,7 +28,9 @@ class SyncRedBusCardsUseCase(private val cardRepository: CardRepository) {
                         balance = card.balance,
                         cardType = card.cardType,
                         cardState = card.cardState,
-                        suggestedName = card.suggestedName
+                        suggestedName = card.suggestedName,
+                        internalNumber = card.internalNumber,
+                        wallets = card.wallets
                     )
                 )
             } catch (e: CancellationException) {

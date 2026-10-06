@@ -11,3 +11,4 @@ graphify-out/
 *.iml
 *.apk
 apk_output/
+local.properties

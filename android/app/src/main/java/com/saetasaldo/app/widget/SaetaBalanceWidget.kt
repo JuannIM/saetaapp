@@ -1,14 +1,20 @@
 package com.saetasaldo.app.widget
 
 import android.content.Context
+import android.content.Intent
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.Button
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.GlanceTheme
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.action.actionRunCallback
+import androidx.glance.appwidget.appWidgetBackground
+import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
+import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
@@ -18,6 +24,7 @@ import androidx.glance.layout.padding
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import com.saetasaldo.app.MainActivity
 import com.saetasaldo.app.data.local.SaetaDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -34,47 +41,70 @@ class SaetaBalanceWidget : GlanceAppWidget() {
         }
 
         provideContent {
-            val balanceStr = card?.currentBalance?.let { String.format(Locale.getDefault(), "$ %.2f", it) } ?: "$ --"
+            val balanceStr = card?.toDomain()?.formattedBalance() ?: "$ --"
             val cardName = card?.name ?: "Sin tarjeta favorita"
             val lastUpdateStr = card?.lastUpdated?.let {
                 SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(it))
             } ?: "--:--"
 
-            Column(
-                modifier = GlanceModifier
-                    .fillMaxSize()
-                    .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    modifier = GlanceModifier.fillMaxWidth(),
+            GlanceTheme {
+                Column(
+                    modifier = GlanceModifier
+                        .fillMaxSize()
+                        .appWidgetBackground()
+                        .background(GlanceTheme.colors.background)
+                        .cornerRadius(16.dp)
+                        .padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = cardName,
-                        style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    )
-                }
+                    Row(
+                        modifier = GlanceModifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = cardName,
+                            style = TextStyle(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = GlanceTheme.colors.onBackground
+                            )
+                        )
+                    }
 
-                Text(
-                    text = balanceStr,
-                    style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 24.sp),
-                    modifier = GlanceModifier.padding(vertical = 4.dp)
-                )
-
-                Row(
-                    modifier = GlanceModifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
                     Text(
-                        text = "Act: $lastUpdateStr",
-                        style = TextStyle(fontSize = 11.sp),
-                        modifier = GlanceModifier.defaultWeight()
+                        text = balanceStr,
+                        style = TextStyle(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 24.sp,
+                            color = GlanceTheme.colors.primary
+                        ),
+                        modifier = GlanceModifier.padding(vertical = 4.dp)
                     )
-                    Button(
-                        text = "Refrescar",
-                        onClick = actionRunCallback<RefreshBalanceAction>()
-                    )
+
+                    Row(
+                        modifier = GlanceModifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Act: $lastUpdateStr",
+                            style = TextStyle(
+                                fontSize = 11.sp,
+                                color = GlanceTheme.colors.onSurfaceVariant
+                            ),
+                            modifier = GlanceModifier.defaultWeight()
+                        )
+                        Button(
+                            text = "Abrir",
+                            onClick = actionStartActivity(
+                                Intent(context, MainActivity::class.java)
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            )
+                        )
+                        Button(
+                            text = "Refrescar",
+                            onClick = actionRunCallback<RefreshBalanceAction>()
+                        )
+                    }
                 }
             }
         }

@@ -5,5 +5,7 @@ data class RedBusAccountCard(
     val balance: Double,
     val cardType: CardType?,
     val cardState: String?,
-    val suggestedName: String?
+    val suggestedName: String?,
+    val internalNumber: String? = null,
+    val wallets: List<CardWallet> = emptyList()
 )

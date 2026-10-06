@@ -10,6 +10,7 @@ import com.saetasaldo.app.data.remote.dto.SaldoRequestDto
 import com.saetasaldo.app.data.remote.dto.SaldoResponseDto
 import com.saetasaldo.app.domain.model.CardBalanceUpdate
 import com.saetasaldo.app.domain.model.CardType
+import com.saetasaldo.app.domain.model.CardWallet
 import com.saetasaldo.app.domain.repository.TurnstileTokenProvider
 import com.saetasaldo.app.domain.usecase.SolveCaptchaUseCase
 import io.mockk.coEvery
@@ -607,4 +608,70 @@ class CardRepositoryTest {
         coVerify(exactly = 0) { solveCaptchaUseCase.invoke() }
         coVerify(exactly = 0) { apiService.queryBalance(any()) }
     }
+
+    // --- Wallet metadata persistence ---
+
+    @Test
+    fun `account update persists internal number and wallets`() = runBlocking {
+        coEvery { cardDao.getCardByNumber("87654321") } returns null
+        val wallets = listOf(
+            CardWallet(
+                name = "Principal (Dinero)",
+                balance = 3170.0,
+                isPassageUnit = true,
+                suffix = " pasajes"
+            )
+        )
+
+        repository.applyBalanceUpdate(
+            CardBalanceUpdate(
+                cardNumber = "87654321",
+                balance = 3170.0,
+                cardType = null,
+                cardState = null,
+                suggestedName = null,
+                internalNumber = "14671CB2",
+                wallets = wallets
+            )
+        )
+
+        val slot = slot<CardEntity>()
+        coVerify(exactly = 1) { cardDao.insertCard(capture(slot)) }
+        assertEquals("14671CB2", slot.captured.internalNumber)
+        val decoded = CardEntity.decodeWallets(slot.captured.walletsJson)
+        assertEquals(1, decoded.size)
+        assertEquals("3170 pasajes", decoded[0].formattedBalance())
+    }
+
+    @Test
+    fun `anonymous refresh preserves stored wallets and internal number`() = runBlocking {
+        val walletsJson = CardEntity.encodeWallets(
+            listOf(
+                CardWallet(
+                    name = "Principal (Dinero)",
+                    balance = 3170.0,
+                    isPassageUnit = true,
+                    suffix = " pasajes"
+                )
+            )
+        )
+        val existing = CardEntity(
+            id = "card-1",
+            name = "Test",
+            cardNumber = "87654321",
+            internalNumber = "14671CB2",
+            walletsJson = walletsJson
+        )
+        coEvery { cardDao.getCardByNumber("87654321") } returns existing
+
+        repository.applyBalanceUpdate(
+            CardBalanceUpdate("87654321", 2500.0, null, null, null)
+        )
+
+        val slot = slot<CardEntity>()
+        coVerify(exactly = 1) { cardDao.insertCard(capture(slot)) }
+        assertEquals("14671CB2", slot.captured.internalNumber)
+        assertEquals(walletsJson, slot.captured.walletsJson)
+    }
 }
+
