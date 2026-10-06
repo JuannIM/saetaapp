@@ -16,7 +16,7 @@ La versión para Android (`android/`) fue diseñada e implementada desde cero co
 | **Resolución de Captcha** | Scraping manual / Redirige a Safari al fallar | **On-Device OCR con Google ML Kit**: Descarga `/captcha.png`, binariza la imagen y resuelve el código alfanumérico en ~50ms sin enviar datos a servidores externos, con 3 reintentos silenciosos y diálogo de fallback manual. |
 | **Widget de Escritorio** | No disponible (limitado por sandbox de iOS) | **Jetpack Glance Widget**: Muestra el saldo actualizado directamente en la pantalla de inicio con botón de refresco de 1 toque. |
 | **Conectividad con RedBus** | Bloqueos por App Transport Security (ATS) ante certificados del portal | **Network Security Config**: Configuración segura de certificados para `salta.miredbus.com.ar` y sesión `JSESSIONID` retenida en memoria. |
-| **Persistencia y Métricas** | `UserDefaults` simple (solo último valor) | **Room Database**: Historial completo de variaciones de saldo, estimación inteligente de viajes restantes (regulares + 2 boletos de emergencia) y editor de tarifa. |
+| **Persistencia y Métricas** | `UserDefaults` simple (solo último valor) | **Room Database**: Historial completo de variaciones de saldo, estimación inteligente de viajes restantes según la tarifa vigente y editor de tarifa. |
 
 ---
 
@@ -37,20 +37,28 @@ android/
 │   │       ├── MainActivity.kt                  # Single-Activity Compose host y despacho NFC
 │   │       ├── domain/                          # Modelos de negocio y Casos de Uso puros
 │   │       │   ├── model/                       # SaetaCard, CardType, BalanceRecord, TripEstimate
-│   │       │   ├── repository/                  # CardRepository (interfaz)
+│   │       │   ├── repository/                  # CardRepository, RedBusAccountRepository (interfaces)
 │   │       │   └── usecase/
 │   │       │       ├── CalculateRemainingTripsUseCase.kt
 │   │       │       ├── GetCardBalanceUseCase.kt
 │   │       │       ├── ProcessNfcScanUseCase.kt
-│   │       │       └── SolveCaptchaUseCase.kt
+│   │       │       ├── RefreshAllBalancesUseCase.kt
+│   │       │       ├── SolveCaptchaUseCase.kt
+│   │       │       └── SyncRedBusCardsUseCase.kt
 │   │       ├── data/                            # Implementación de datos y proveedores
 │   │       │   ├── local/                       # Room DB: SaetaDatabase, DAOs, Entities, Converters
-│   │       │   ├── remote/                      # Retrofit + OkHttp: SaetaApiService, SessionCookieJar
+│   │       │   ├── remote/                      # Retrofit + OkHttp
+│   │       │   │   ├── api/                     # SaetaApiService (anónimo), RedBusAccountApiService (cuenta)
+│   │       │   │   ├── cookie/                  # SessionCookieJar (anónimo), WebViewCookieJar/WebCookieStore (cuenta)
+│   │       │   │   ├── dto/                     # SaldoRequestDto/SaldoResponseDto, RedBusAccountDtos
+│   │       │   │   ├── NetworkClient.kt         # Cliente OkHttp del flujo anónimo
+│   │       │   │   └── RedBusAccountNetworkClient.kt  # Cliente OkHttp dedicado a la sesión de cuenta
 │   │       │   ├── ocr/                         # Google ML Kit OCR & Preprocesador Binarizador
 │   │       │   ├── nfc/                         # AndroidNfcManager (Foreground & Background dispatch)
-│   │       │   └── repository/                  # CardRepositoryImpl (orquestación y sincronización)
+│   │       │   └── repository/                  # CardRepositoryImpl, RedBusAccountRepositoryImpl
 │   │       ├── ui/                              # Capa de presentación Jetpack Compose
 │   │       │   ├── theme/                       # Material 3 tokens: Color (Azul/Verde SAETA, Oro), Theme
+│   │       │   ├── account/                     # RedBusLoginScreen (WebView), RedBusAccountDialog, RedBusAccountViewModel
 │   │       │   ├── cards/                       # CardsScreen, CardsViewModel, SaetaCardItem
 │   │       │   ├── detail/                      # CardDetailScreen, CardDetailViewModel
 │   │       │   ├── nfc/                         # NfcScanBottomSheet (onda radar animada)
@@ -59,7 +67,7 @@ android/
 │   │           ├── SaetaBalanceWidget.kt        # UI interactiva en Glance
 │   │           ├── SaetaBalanceWidgetReceiver.kt# Receptor AppWidgetProvider
 │   │           └── RefreshBalanceAction.kt      # Actualización en background con 1 toque
-│   └── src/test/                                # 54 pruebas unitarias automatizadas
+│   └── src/test/                                # 160 pruebas unitarias automatizadas
 ```
 
 ---
@@ -95,22 +103,34 @@ El portal `salta.miredbus.com.ar` no ofrece una API REST pública documentada. D
      }
      ```
    - Códigos de respuesta: `0 = Éxito`, `1 = Captcha inválido`, `2 = Tarjeta inexistente`.
+   - **Modo Turnstile (preferido):** cuando no hay captcha manual, la app primero obtiene el sitekey público con `GET /rest/getTurnstileKeySite`, resuelve un token de Cloudflare Turnstile en un WebView fuera de pantalla sobre el dominio oficial y envía `X-Use-New-Captcha: true` con el token en `verificacionCaptcha`. Si el token falla o es rechazado (`error: 1`), se recurre automáticamente al captcha de imagen con OCR local y, como último recurso, al diálogo manual.
+
+### Flujo autenticado opcional (cuenta RedBus)
+
+Además del flujo anónimo, el usuario puede conectar de forma **opcional** su cuenta RedBus. El inicio de sesión se realiza en un **WebView endurecido** que carga el formulario oficial de `salta.miredbus.com.ar` (con Cloudflare Turnstile): la app no implementa un formulario nativo de credenciales, no inspecciona el DOM ni agrega puentes JavaScript (`addJavascriptInterface`). Las cookies de sesión se comparten únicamente a través de `CookieManager` hacia un cliente OkHttp dedicado, aislado del cliente anónimo.
+
+Endpoints internos utilizados una vez autenticado:
+
+- `GET https://salta.miredbus.com.ar/rest/loginInternal/usuarioLogeado`
+  - Verificación de sesión: `error: 0` = sesión activa, `error: 1` = no autenticado.
+- `GET https://salta.miredbus.com.ar/rest/tarjetaInternal/listaTarjetas`
+  - Lista las tarjetas vinculadas a la cuenta con sus monederos; solo se importa el saldo del monedero **`Principal (Dinero)`** (nunca beneficios ni boletos gratuitos). Responde `error: 99` cuando no hay sesión autenticada.
+
+La desconexión es **local**: elimina las cookies del `CookieManager` y conserva intactas las tarjetas guardadas. Estos endpoints son **internos y no documentados** por RedBus, por lo que pueden cambiar sin previo aviso; ante cualquier falla o cambio de contrato, la app recurre automáticamente al flujo anónimo de captcha/OCR.
 
 ---
 
 ## 📱 Pantallas de la Aplicación Android
 
 1. **Mis Tarjetas (`CardsScreen`):**
-   - Tarjetas diseñadas como plásticos físicos digitales con gradientes institucionales:
-     - **Azul Común:** Gradiente `#0D47A1` a `#1976D2`.
-     - **Verde Beneficiario (Jubilados / Estudiantes / Pase Libre):** Gradiente `#1B5E20` a `#388E3C`.
+   - Tarjetas diseñadas como plásticos físicos digitales con el gradiente azul institucional de SAETA (`#0D47A1` a `#1976D2`), sin pedir ni mostrar una categoría de usuario.
    - Tipografía grande de saldo (`$ 1.500,00`), número impreso y badges de tarjeta favorita y NFC vinculado.
    - Gesto Pull-to-Refresh para actualización masiva.
    - Botón de Acción Flotante (FAB) para escanear nueva tarjeta vía NFC.
 
 2. **Detalle de Tarjeta (`CardDetailScreen`):**
    - Encabezado ampliado con acciones rápidas: fijar como tarjeta del Widget de escritorio y botón de refresco.
-   - **Estimador Inteligente de Viajes:** Calcula cuántos boletos cubre el saldo actual con tarifa configurable (soporta coma y punto decimal: `690,00`), contemplando los 2 boletos de saldo negativo de emergencia para tarjetas azules.
+   - **Estimador Inteligente de Viajes:** Calcula cuántos boletos cubre el saldo actual con tarifa configurable (valor por defecto `1450,00`; el campo acepta coma o punto decimal). La estimación se basa estrictamente en el saldo disponible y marca aparte si la tarjeta quedó en saldo negativo.
    - **Historial de Variaciones:** Registro cronológico de variaciones de saldo con badges diferenciales (`+ $...` / `- $...`).
    - Edición de nombre y eliminación de tarjeta.
 
@@ -122,6 +142,11 @@ El portal `salta.miredbus.com.ar` no ofrece una API REST pública documentada. D
 4. **Verificación Manual de Seguridad (`FallbackCaptchaDialog`):**
    - Diálogo modal de contingencia si el motor OCR local agota sus 3 reintentos silenciosos.
    - Presenta la imagen del captcha en pantalla con botón para regenerarlo y campo de texto con auto-capitalización.
+
+5. **Cuenta RedBus Opcional (`RedBusLoginScreen` + `RedBusAccountDialog`):**
+   - Inicio de sesión en el sitio oficial de RedBus dentro de un WebView endurecido (JavaScript y DOM storage para Turnstile, sin puente JavaScript, navegación principal limitada a HTTPS en el host exacto).
+   - Sincronización de las tarjetas vinculadas a la cuenta con el saldo del monedero `Principal (Dinero)`, sin captcha por cada consulta.
+   - El modo anónimo (captcha/OCR + NFC) permanece intacto como alternativa y como fallback automático ante sesiones expiradas o fallas del contrato.
 
 ---
 

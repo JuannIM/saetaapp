@@ -47,5 +47,8 @@
                 android:resource="@xml/saeta_widget_info" />
         </receiver>
 
+        <meta-data
+            android:name="android.webkit.WebView.EnableSafeBrowsing"
+            android:value="true" />
     </application>
 </manifest>

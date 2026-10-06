@@ -9,15 +9,15 @@ object PrivacyPolicyContent {
     val sections: List<PolicySection> = listOf(
         PolicySection(
             title = "1. Privacidad y Almacenamiento Local",
-            content = "SAETA Saldo es una aplicación de código abierto diseñada bajo la filosofía 'Local-First'. Todas tus tarjetas, alias y registros de saldo se almacenan exclusivamente en la memoria local de tu dispositivo mediante una base de datos SQLite segura. No existen servidores intermedios, cuentas de usuario ni recolección de datos en la nube."
+            content = "SAETA Saldo es una aplicación de código abierto diseñada bajo la filosofía 'Local-First'. Todas tus tarjetas, alias y registros de saldo se almacenan exclusivamente en la memoria local de tu dispositivo mediante una base de datos SQLite segura. El desarrollador no dispone de servidores intermedios ni recopila datos en la nube. La conexión con tu cuenta de RedBus es completamente opcional: sin ella la app funciona igual en modo anónimo, y tus datos locales permanecen siempre en el dispositivo."
         ),
         PolicySection(
             title = "2. Consultas a MiRedBus",
-            content = "Para consultar el saldo disponible, la aplicación se comunica directamente mediante conexión cifrada HTTPS con el portal oficial de MiRedBus Salta. Únicamente se envía el número de tarjeta y el código de seguridad (captcha) para obtener la respuesta. No se recopilan identificadores de dispositivo, ubicación ni datos personales."
+            content = "La app ofrece dos formas de consultar tu saldo. En el modo anónimo, siempre disponible, se envía únicamente el número de tarjeta y el código de seguridad (captcha) al portal oficial de MiRedBus Salta mediante conexión cifrada HTTPS. Opcionalmente puedes conectar tu cuenta de RedBus: el inicio de sesión se realiza directamente en la página oficial de RedBus dentro de un WebView protegido, y SAETA Saldo nunca recibe, lee ni almacena tu contraseña. Las cookies de sesión del portal se guardan solo en el almacenamiento privado de la app y se usan exclusivamente para consultar tus tarjetas vinculadas sin captcha: se leen únicamente el número de tarjeta vinculada, el saldo principal, el tipo y el estado de la tarjeta. No se recopilan identificadores de dispositivo, ubicación ni datos personales."
         ),
         PolicySection(
             title = "3. Reconocimiento de Captcha en el Dispositivo",
-            content = "La resolución automática de códigos captcha se procesa íntegramente de forma local mediante Google ML Kit Text Recognition en tu propio teléfono. Las imágenes nunca se suben ni se comparten con servicios externos."
+            content = "La resolución automática de códigos captcha se procesa íntegramente de forma local mediante Google ML Kit Text Recognition en tu propio teléfono. Las imágenes nunca se suben ni se comparten con servicios externos. Además, la app puede resolver la verificación ejecutando un desafío de Cloudflare Turnstile en un WebView interno sobre el dominio oficial de MiRedBus; no intervienen credenciales ni datos personales."
         ),
         PolicySection(
             title = "4. Permisos Requeridos",
@@ -25,7 +25,7 @@ object PrivacyPolicyContent {
         ),
         PolicySection(
             title = "5. Control y Eliminación de Datos",
-            content = "Tú tienes el control total sobre tus datos. Puedes editar o eliminar cualquier tarjeta en cualquier momento; al eliminarla, se borra instantáneamente todo su historial asociado. Al desinstalar la app, todos los datos se destruyen permanentemente del dispositivo."
+            content = "Tú tienes el control total sobre tus datos. Puedes editar o eliminar cualquier tarjeta en cualquier momento; al eliminarla, se borra instantáneamente todo su historial asociado. Si conectaste tu cuenta de RedBus, la opción \"Desconectar\" elimina las cookies de sesión del portal del dispositivo; tus tarjetas e historial locales permanecen intactos. Al desinstalar la app, todos los datos se destruyen permanentemente del dispositivo."
         ),
         PolicySection(
             title = "6. Descargo de Responsabilidad",

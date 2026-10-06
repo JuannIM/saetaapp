@@ -62,7 +62,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.saetasaldo.app.domain.model.BalanceRecord
-import com.saetasaldo.app.domain.model.CardType
 import com.saetasaldo.app.domain.model.TripEstimate
 import com.saetasaldo.app.ui.cards.components.SaetaCardItem
 import com.saetasaldo.app.ui.dialogs.FallbackCaptchaDialog
@@ -238,7 +237,6 @@ fun CardDetailScreen(
                     TripEstimatorSection(
                         estimate = tripEstimate,
                         fare = fare,
-                        cardType = currentCard.type,
                         onEditFareClick = { showFareDialog = true }
                     )
                 }
@@ -387,7 +385,6 @@ fun CardDetailScreen(
 private fun TripEstimatorSection(
     estimate: TripEstimate?,
     fare: Double,
-    cardType: CardType,
     onEditFareClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {

@@ -17,7 +17,6 @@ class SolveCaptchaUseCase(
         repeat(maxAttempts) { attempt ->
             try {
                 val response = apiService.getCaptchaImage()
-                val body = response.body()
                 if (response.isSuccessful) {
                     val body = response.body()
                     if (body != null) {

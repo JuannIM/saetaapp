@@ -1,0 +1,15 @@
+{
+  "error": 0,
+  "id": 1,
+  "username": "usuario@example.invalid",
+  "apellido": "APELLIDO_REDACTADO",
+  "nombre": "NOMBRE_REDACTADO",
+  "documento": null,
+  "roles": [
+    "ROL_REDACTADO"
+  ],
+  "sistema": "SISTEMA_REDACTADO",
+  "telefono": null,
+  "genero": null,
+  "fechaNacimiento": null
+}

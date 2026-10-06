@@ -11,10 +11,13 @@
 
 SAETA Saldo is an open-source, local-first utility for querying public bus card balances in Salta, Argentina.
 - **Data Collected for App Functionality:** None stored on external developer servers.
-- **Data Shared with Third Parties:** None. (The app sends direct HTTPS requests to the public transit provider `salta.miredbus.com.ar` to fetch balance, identical to a browser query).
+- **Data Shared with Third Parties:** None shared with advertising, analytics, or unrelated parties. The app sends direct HTTPS requests to the public transit provider `salta.miredbus.com.ar` to fetch balance, identical to a browser query.
+- **Optional Account Connection:** Users may optionally log in on the official RedBus site inside a hardened in-app WebView. Credentials are entered directly into the provider's page and are never received, read, or stored by the app or the developer. Portal session cookies are processed on-device, held only in the app-private `CookieManager`, and sent only to `salta.miredbus.com.ar`; they are deleted when the user disconnects. Anonymous captcha mode remains fully available without an account.
 - **Data Tracking / Advertising:** Zero advertising, analytics, or behavioral tracking SDKs.
 - **Data Encryption in Transit:** 100% of network traffic uses TLS 1.2+ HTTPS. Cleartext HTTP is disabled.
-- **User Data Deletion:** Supported locally inside the app. Deleting a card wipes all associated history.
+- **User Data Deletion:** Supported locally inside the app. Deleting a card wipes all associated history; "Desconectar" removes the portal session cookies.
+
+> **Action required when this feature ships:** the Data Safety questionnaire must be re-submitted in Play Console. The answers below were updated for the optional RedBus account flow on 2026-10-05.
 
 ---
 
@@ -38,8 +41,8 @@ SAETA Saldo is an open-source, local-first utility for querying public bus card 
 
 #### 2. Personal info
 - **Name:** No
-- **Email address:** No
-- **User IDs:** No
+- **Email address:** See interpretation note below.
+- **User IDs:** See interpretation note below.
 - **Address:** No
 - **Phone number:** No
 - **Race and ethnicity:** No
@@ -47,16 +50,23 @@ SAETA Saldo is an open-source, local-first utility for querying public bus card 
 - **Sexual orientation:** No
 - **Other personal info:** No
 
+> **Interpretation note — optional RedBus login (verify against the live form before submitting):**
+> When a user optionally connects their RedBus account, they type their credentials (email/username and password) directly into the official provider page rendered inside an isolated WebView. SAETA Saldo's own code never receives, reads, or stores those credentials — there is no JavaScript bridge and no DOM access — and they are transmitted only to `salta.miredbus.com.ar`. The only artifact the app retains is the provider's session cookies, held in the app-private `CookieManager`, sent exclusively back to that host, and deleted on "Desconectar".
+>
+> **Chosen answer:** declare Email address / User IDs as **shared with the provider, not collected by the developer**: *Collected?* No. *Shared?* Yes — with the service provider the user is logging into, at the user's explicit request (the credentials travel only inside the provider's own HTTPS page). *Ephemeral?* Yes for the credentials themselves — they never touch app code or storage; the derived session cookies persist on-device only until disconnect or provider expiry. *Required or optional?* Optional — the anonymous captcha flow works without an account. *Purpose:* App functionality.
+>
+> **Alternative reading:** if the Play form treats a login typed into the provider's own WebView page like an ordinary browser visit — i.e., the user hands data to the provider itself and the app "shares" nothing — answer **No** for Email address / User IDs instead. The app's actual behavior is exactly as described above either way; pick whichever answer the current form wording demands and keep this note accurate.
+
 #### 3. Financial info
 - **User payment info (Credit / Debit card):** No
 - **Purchase history:** No
 - **Credit score:** No
 - **Other financial info (Transit card balance / number):**
   - *If declared in Play Console:*
-    - **Collected?** Only locally processed and ephemerally transmitted to the transit query endpoint.
+    - **Collected?** Only locally processed and ephemerally transmitted to the transit query endpoint. With the optional account connection, the linked card number, `Principal (Dinero)` balance, card type, and card state are additionally read through the authenticated provider session and stored only in the on-device database.
     - **Shared?** No.
-    - **Ephemeral processing?** Yes (the query is executed in real-time and not logged to developer servers).
-    - **Required or optional?** Required for the core feature (checking card balance).
+    - **Ephemeral processing?** Yes for the anonymous query (executed in real-time, not logged to developer servers). Account-synced values are retained only in the local database under the user's control.
+    - **Required or optional?** Required for the core feature (checking card balance); the account connection itself is optional.
     - **Purpose:** App functionality.
 
 #### 4. Health and fitness

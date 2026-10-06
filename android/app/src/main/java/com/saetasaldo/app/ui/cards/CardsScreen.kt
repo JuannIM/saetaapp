@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Nfc
@@ -24,6 +25,7 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -47,7 +49,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.saetasaldo.app.domain.model.RedBusSessionState
 import com.saetasaldo.app.domain.model.SaetaCard
+import com.saetasaldo.app.ui.account.RedBusAccountDialog
+import com.saetasaldo.app.ui.account.RedBusAccountUiState
 import com.saetasaldo.app.ui.cards.components.SaetaCardItem
 import com.saetasaldo.app.ui.dialogs.PrivacyPolicyDialog
 import com.saetasaldo.app.ui.theme.SaetaBluePrimary
@@ -60,6 +65,11 @@ fun CardsScreen(
     onAddCardClick: () -> Unit,
     onScanNfcClick: () -> Unit,
     isNfcSupported: Boolean = true,
+    redBusAccountState: RedBusAccountUiState? = null,
+    onConnectRedBus: () -> Unit = {},
+    onSyncRedBus: () -> Unit = {},
+    onDisconnectRedBus: () -> Unit = {},
+    onAccountMessageConsumed: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val cards by viewModel.cards.collectAsState()
@@ -67,6 +77,7 @@ fun CardsScreen(
     val errorMessage by viewModel.errorMessage.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     var showPrivacyDialog by remember { mutableStateOf(false) }
+    var showAccountDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(errorMessage) {
         errorMessage?.let { msg ->
@@ -87,6 +98,25 @@ fun CardsScreen(
                     )
                 },
                 actions = {
+                    if (redBusAccountState != null) {
+                        val isConnected =
+                            redBusAccountState.sessionState == RedBusSessionState.Connected
+                        IconButton(onClick = { showAccountDialog = true }) {
+                            Icon(
+                                imageVector = Icons.Default.AccountCircle,
+                                contentDescription = if (isConnected) {
+                                    "Cuenta RedBus conectada"
+                                } else {
+                                    "Conectar cuenta RedBus"
+                                },
+                                tint = if (isConnected) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    LocalContentColor.current
+                                }
+                            )
+                        }
+                    }
                     IconButton(onClick = { showPrivacyDialog = true }) {
                         Icon(
                             imageVector = Icons.Default.Shield,
@@ -223,6 +253,22 @@ fun CardsScreen(
     if (showPrivacyDialog) {
         PrivacyPolicyDialog(
             onDismiss = { showPrivacyDialog = false }
+        )
+    }
+
+    if (showAccountDialog && redBusAccountState != null) {
+        RedBusAccountDialog(
+            state = redBusAccountState,
+            onConnect = {
+                showAccountDialog = false
+                onConnectRedBus()
+            },
+            onSync = onSyncRedBus,
+            onDisconnect = onDisconnectRedBus,
+            onDismiss = {
+                showAccountDialog = false
+                onAccountMessageConsumed()
+            }
         )
     }
 }

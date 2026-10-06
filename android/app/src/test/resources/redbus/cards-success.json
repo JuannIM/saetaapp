@@ -1,0 +1,41 @@
+{
+  "error": 0,
+  "tarjetas": [
+    {
+      "nroInterno": "90000001",
+      "relationship": "TITULAR",
+      "documento": null,
+      "description": "Tarjeta de ejemplo",
+      "verificationSuccessful": null,
+      "verificationDate": null,
+      "sistema": "SISTEMA_REDACTADO",
+      "vinculacionSegura": false,
+      "verifications": [],
+      "estadoTarjeta": "ACTIVA",
+      "tarjetaDatosAdicionales": {
+        "saldos": [
+          {
+            "saldo": 1450.5,
+            "monedero": {
+              "id": 1,
+              "unidadPasajes": false,
+              "nombre": "Principal (Dinero)",
+              "prefijoSaldo": "PREFIJO_REDACTADO",
+              "sufijoSaldo": "SUFIJO_REDACTADO"
+            }
+          }
+        ],
+        "tipoTarjeta": "COMUN",
+        "estadoTarjeta": "ACTIVA",
+        "codExterno": 12345678,
+        "fechaSaldo": 1767268800000,
+        "tipoDocumento": "TIPO_REDACTADO",
+        "documento": "00000000",
+        "codInterno": "90000001",
+        "codigo": 1,
+        "fechaAlta": 1767268800000,
+        "fechaUltimaTRX": 1767268800000
+      }
+    }
+  ]
+}

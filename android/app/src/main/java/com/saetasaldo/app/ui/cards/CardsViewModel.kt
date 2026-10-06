@@ -2,10 +2,11 @@ package com.saetasaldo.app.ui.cards
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.saetasaldo.app.domain.model.CardType
 import com.saetasaldo.app.domain.model.SaetaCard
 import com.saetasaldo.app.domain.repository.CardRepository
 import com.saetasaldo.app.domain.usecase.GetCardBalanceUseCase
+import com.saetasaldo.app.domain.usecase.RefreshAllBalancesUseCase
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -16,7 +17,8 @@ import java.util.UUID
 
 class CardsViewModel(
     private val repository: CardRepository,
-    private val getCardBalanceUseCase: GetCardBalanceUseCase
+    private val getCardBalanceUseCase: GetCardBalanceUseCase,
+    private val refreshAllBalancesUseCase: RefreshAllBalancesUseCase? = null
 ) : ViewModel() {
 
     val cards: StateFlow<List<SaetaCard>> = repository.getAllCards()
@@ -33,16 +35,27 @@ class CardsViewModel(
             _isRefreshing.value = true
             _errorMessage.value = null
             try {
-                val currentCards = cards.value
-                for ((index, card) in currentCards.withIndex()) {
-                    if (index > 0) {
-                        kotlinx.coroutines.delay(800) // Polite pacing to prevent bot-flagging
+                val coordinator = refreshAllBalancesUseCase
+                if (coordinator != null) {
+                    val result = coordinator(cards.value)
+                    if (result.failures.isNotEmpty()) {
+                        _errorMessage.value = result.failures.values.first().message
                     }
-                    val result = getCardBalanceUseCase(card.cardNumber)
-                    if (result.isFailure) {
-                        _errorMessage.value = result.exceptionOrNull()?.localizedMessage
+                } else {
+                    // Legacy path until the coordinator is wired in (Task 11).
+                    val currentCards = cards.value
+                    for ((index, card) in currentCards.withIndex()) {
+                        if (index > 0) {
+                            kotlinx.coroutines.delay(800) // Polite pacing to prevent bot-flagging
+                        }
+                        val result = getCardBalanceUseCase(card.cardNumber)
+                        if (result.isFailure) {
+                            _errorMessage.value = result.exceptionOrNull()?.localizedMessage
+                        }
                     }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _errorMessage.value = e.localizedMessage ?: "Error al actualizar saldos"
             } finally {
@@ -72,7 +85,6 @@ class CardsViewModel(
         name: String,
         cardNumber: String,
         nfcUid: String? = null,
-        type: CardType = CardType.AZUL_COMUN,
         onComplete: ((Result<SaetaCard>) -> Unit)? = null
     ) {
         viewModelScope.launch {
@@ -84,7 +96,6 @@ class CardsViewModel(
                     name = name.ifBlank { "Tarjeta SAETA" },
                     cardNumber = cardNumber.trim(),
                     nfcUid = nfcUid?.trim()?.uppercase(),
-                    type = type,
                     isFavorite = isFirstCard
                 )
                 repository.saveCard(newCard)

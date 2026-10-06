@@ -4,9 +4,12 @@ import com.saetasaldo.app.domain.model.CardType
 import com.saetasaldo.app.domain.model.SaetaCard
 import com.saetasaldo.app.domain.repository.CardRepository
 import com.saetasaldo.app.domain.usecase.GetCardBalanceUseCase
+import com.saetasaldo.app.domain.usecase.RefreshAllBalancesResult
+import com.saetasaldo.app.domain.usecase.RefreshAllBalancesUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +23,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -30,6 +34,7 @@ class CardsViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
     private val repository = mockk<CardRepository>(relaxed = true)
     private val getCardBalanceUseCase = mockk<GetCardBalanceUseCase>(relaxed = true)
+    private val refreshAllBalancesUseCase = mockk<RefreshAllBalancesUseCase>(relaxed = true)
     private val cardsFlow = MutableStateFlow<List<SaetaCard>>(emptyList())
 
     @Before
@@ -45,7 +50,7 @@ class CardsViewModelTest {
 
     @Test
     fun `cards StateFlow emits initial empty list and updates from repository`() = runTest {
-        val viewModel = CardsViewModel(repository, getCardBalanceUseCase)
+        val viewModel = CardsViewModel(repository, getCardBalanceUseCase, refreshAllBalancesUseCase)
         backgroundScope.launch { viewModel.cards.collect() }
         advanceUntilIdle()
         assertTrue(viewModel.cards.value.isEmpty())
@@ -59,24 +64,84 @@ class CardsViewModelTest {
     }
 
     @Test
-    fun `refreshAllBalances iterates through all cards and queries balance`() = runTest {
+    fun `refresh all delegates the current card snapshot once`() = runTest {
         val card1 = SaetaCard(id = "1", name = "Tarjeta 1", cardNumber = "111111")
         val card2 = SaetaCard(id = "2", name = "Tarjeta 2", cardNumber = "222222")
         cardsFlow.value = listOf(card1, card2)
 
-        val viewModel = CardsViewModel(repository, getCardBalanceUseCase)
+        val viewModel = CardsViewModel(repository, getCardBalanceUseCase, refreshAllBalancesUseCase)
         backgroundScope.launch { viewModel.cards.collect() }
         advanceUntilIdle()
 
-        coEvery { getCardBalanceUseCase("111111") } returns Result.success(card1.copy(currentBalance = 500.0))
-        coEvery { getCardBalanceUseCase("222222") } returns Result.success(card2.copy(currentBalance = 1000.0))
+        coEvery { refreshAllBalancesUseCase(any()) } returns
+            RefreshAllBalancesResult(updatedCount = 2, failures = emptyMap())
 
         viewModel.refreshAllBalances()
         advanceUntilIdle()
 
-        coVerify(exactly = 1) { getCardBalanceUseCase("111111") }
-        coVerify(exactly = 1) { getCardBalanceUseCase("222222") }
+        coVerify(exactly = 1) { refreshAllBalancesUseCase(match { it.size == 2 }) }
+        coVerify(exactly = 0) { getCardBalanceUseCase(any()) }
         assertFalse(viewModel.isRefreshing.value)
+    }
+
+    @Test
+    fun `refresh all displays the first partial failure`() = runTest {
+        val card = SaetaCard(id = "1", name = "Tarjeta 1", cardNumber = "111111")
+        cardsFlow.value = listOf(card)
+
+        val viewModel = CardsViewModel(repository, getCardBalanceUseCase, refreshAllBalancesUseCase)
+        backgroundScope.launch { viewModel.cards.collect() }
+        advanceUntilIdle()
+
+        coEvery { refreshAllBalancesUseCase(any()) } returns RefreshAllBalancesResult(
+            updatedCount = 1,
+            failures = mapOf("222222" to RuntimeException("fallo parcial"))
+        )
+
+        viewModel.refreshAllBalances()
+        advanceUntilIdle()
+
+        assertEquals("fallo parcial", viewModel.errorMessage.value)
+        assertFalse(viewModel.isRefreshing.value)
+    }
+
+    @Test
+    fun `refresh all with no failures clears stale errors`() = runTest {
+        val viewModel = CardsViewModel(repository, getCardBalanceUseCase, refreshAllBalancesUseCase)
+        backgroundScope.launch { viewModel.cards.collect() }
+        advanceUntilIdle()
+
+        coEvery { getCardBalanceUseCase("111111") } returns Result.failure(RuntimeException("stale"))
+        viewModel.refreshCard("111111")
+        advanceUntilIdle()
+        assertEquals("stale", viewModel.errorMessage.value)
+
+        coEvery { refreshAllBalancesUseCase(any()) } returns
+            RefreshAllBalancesResult(updatedCount = 1, failures = emptyMap())
+
+        viewModel.refreshAllBalances()
+        advanceUntilIdle()
+
+        assertNull(viewModel.errorMessage.value)
+        assertFalse(viewModel.isRefreshing.value)
+    }
+
+    @Test
+    fun `refresh all resets loading after cancellation or failure`() = runTest {
+        val viewModel = CardsViewModel(repository, getCardBalanceUseCase, refreshAllBalancesUseCase)
+        backgroundScope.launch { viewModel.cards.collect() }
+        advanceUntilIdle()
+
+        coEvery { refreshAllBalancesUseCase(any()) } throws CancellationException("cancelled")
+        viewModel.refreshAllBalances()
+        advanceUntilIdle()
+        assertFalse(viewModel.isRefreshing.value)
+
+        coEvery { refreshAllBalancesUseCase(any()) } throws RuntimeException("boom")
+        viewModel.refreshAllBalances()
+        advanceUntilIdle()
+        assertFalse(viewModel.isRefreshing.value)
+        assertEquals("boom", viewModel.errorMessage.value)
     }
 
     @Test
@@ -84,7 +149,7 @@ class CardsViewModelTest {
         val card = SaetaCard(id = "1", name = "Tarjeta 1", cardNumber = "111111")
         coEvery { getCardBalanceUseCase("111111") } returns Result.success(card)
 
-        val viewModel = CardsViewModel(repository, getCardBalanceUseCase)
+        val viewModel = CardsViewModel(repository, getCardBalanceUseCase, refreshAllBalancesUseCase)
         viewModel.refreshCard("111111")
         advanceUntilIdle()
 
@@ -94,7 +159,7 @@ class CardsViewModelTest {
 
     @Test
     fun `addNewCard saves card and immediately refreshes balance`() = runTest {
-        val viewModel = CardsViewModel(repository, getCardBalanceUseCase)
+        val viewModel = CardsViewModel(repository, getCardBalanceUseCase, refreshAllBalancesUseCase)
         advanceUntilIdle()
 
         coEvery { getCardBalanceUseCase(any()) } returns Result.success(
@@ -105,8 +170,7 @@ class CardsViewModelTest {
         viewModel.addNewCard(
             name = "Mi Tarjeta",
             cardNumber = "999999",
-            nfcUid = "04A1B2C3",
-            type = CardType.AZUL_COMUN
+            nfcUid = "04A1B2C3"
         ) { result ->
             callbackInvoked = true
             assertTrue(result.isSuccess)
@@ -116,7 +180,7 @@ class CardsViewModelTest {
         assertTrue(callbackInvoked)
         coVerify(exactly = 1) {
             repository.saveCard(match {
-                it.cardNumber == "999999" && it.name == "Mi Tarjeta" && it.nfcUid == "04A1B2C3"
+                it.cardNumber == "999999" && it.name == "Mi Tarjeta" && it.nfcUid == "04A1B2C3" && it.type == CardType.AZUL_COMUN
             })
         }
         coVerify(exactly = 1) { getCardBalanceUseCase("999999") }
@@ -125,7 +189,7 @@ class CardsViewModelTest {
     @Test
     fun `deleteCard delegates to repository`() = runTest {
         val card = SaetaCard(id = "1", name = "A borrar", cardNumber = "111111")
-        val viewModel = CardsViewModel(repository, getCardBalanceUseCase)
+        val viewModel = CardsViewModel(repository, getCardBalanceUseCase, refreshAllBalancesUseCase)
 
         viewModel.deleteCard(card)
         advanceUntilIdle()
@@ -135,7 +199,7 @@ class CardsViewModelTest {
 
     @Test
     fun `setFavorite delegates to repository`() = runTest {
-        val viewModel = CardsViewModel(repository, getCardBalanceUseCase)
+        val viewModel = CardsViewModel(repository, getCardBalanceUseCase, refreshAllBalancesUseCase)
 
         viewModel.setFavorite("card-123")
         advanceUntilIdle()

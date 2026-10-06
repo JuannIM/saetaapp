@@ -27,12 +27,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.saetasaldo.app.domain.model.CardType
 import com.saetasaldo.app.domain.model.SaetaCard
 import com.saetasaldo.app.ui.theme.SaetaBluePrimary
 import com.saetasaldo.app.ui.theme.SaetaBlueSecondary
-import com.saetasaldo.app.ui.theme.SaetaGreenPrimary
-import com.saetasaldo.app.ui.theme.SaetaGreenSecondary
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -43,11 +40,7 @@ fun SaetaCardItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val gradient = if (card.type == CardType.VERDE_BENEFICIARIO) {
-        Brush.horizontalGradient(listOf(SaetaGreenPrimary, SaetaGreenSecondary))
-    } else {
-        Brush.horizontalGradient(listOf(SaetaBluePrimary, SaetaBlueSecondary))
-    }
+    val gradient = Brush.horizontalGradient(listOf(SaetaBluePrimary, SaetaBlueSecondary))
 
     Card(
         modifier = modifier
@@ -115,23 +108,12 @@ fun SaetaCardItem(
                     }
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Nº ${card.cardNumber}",
-                        color = Color.White.copy(alpha = 0.85f),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Text(
-                        text = card.type.displayName,
-                        color = Color.White.copy(alpha = 0.85f),
-                        fontSize = 12.sp
-                    )
-                }
+                Text(
+                    text = "Nº ${card.cardNumber}",
+                    color = Color.White.copy(alpha = 0.85f),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
             }
         }
     }

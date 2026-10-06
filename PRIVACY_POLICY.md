@@ -1,8 +1,8 @@
 # Política de Privacidad / Privacy Policy — SAETA Saldo Android
 
-**Última actualización / Last updated:** 1 de Octubre de 2026  
-**Aplicación / Application:** SAETA Saldo (com.saetasaldo.app)  
-**Desarrollador / Developer:** Juan Ignacio Mercado (Proyecto de Código Abierto / Open Source Project)  
+**Última actualización / Last updated:** 5 de Octubre de 2026\
+**Aplicación / Application:** SAETA Saldo (com.saetasaldo.app)\
+**Desarrollador / Developer:** Juan Ignacio Mercado (Proyecto de Código Abierto / Open Source Project)\
 **Repositorio / Repository:** [https://github.com/JuannIM/saetaapp](https://github.com/JuannIM/saetaapp)
 
 ---
@@ -13,7 +13,7 @@
 
 La aplicación opera bajo el principio estricto de **Privacidad por Diseño (Privacy by Design)** y **Almacenamiento Local Exclusivo (Local-First)**:
 - **Cero Telemetría / Zero Trackers:** No contiene SDKs de análisis, publicidad, rastreo de comportamiento ni analítica (Google Analytics, Firebase Analytics, Crashlytics, Mixpanel, etc.).
-- **Sin Cuentas ni Registros:** No requiere correo electrónico, nombre, número de teléfono, contraseña ni vinculación con redes sociales.
+- **Cuenta RedBus Opcional / Optional Account:** La conexión con una cuenta RedBus es opcional; sin ella la app funciona igual (modo anónimo con captcha). La aplicación no posee registro propio: no solicita correo electrónico, nombre, número de teléfono ni vinculación con redes sociales. Si eliges conectar tu cuenta, el inicio de sesión se realiza en el sitio oficial de RedBus (ver §4.1).
 - **Sin Servidores Propios:** No disponemos de servidores intermedios, bases de datos en la nube ni servicios de retransmisión (relays). La aplicación no recopila ni centraliza información de sus usuarios.
 
 ---
@@ -22,11 +22,12 @@ La aplicación opera bajo el principio estricto de **Privacidad por Diseño (Pri
 
 | Dato | Dónde se origina | Dónde se almacena | Se transmite a terceros | Finalidad |
 | :--- | :--- | :--- | :--- | :--- |
-| **Número de Tarjeta SAETA** | Ingresado manualmente o leído por NFC | 100% localmente en el dispositivo (SQLite Room) | Exclusivamente al portal oficial de MiRedBus Salta vía HTTPS | Consultar el saldo oficial |
+| **Número de Tarjeta SAETA** | Ingresado manualmente, leído por NFC o sincronizado desde tu cuenta RedBus (opcional) | 100% localmente en el dispositivo (SQLite Room) | Exclusivamente al portal oficial de MiRedBus Salta vía HTTPS (modo anónimo con captcha, o sesión autenticada opcional) | Consultar el saldo oficial |
 | **Alias de la Tarjeta** | Ingresado por el usuario (ej. "Mi Tarjeta") | 100% localmente en el dispositivo | **Nunca** | Identificación visual en la UI |
 | **Historial de Saldos** | Calculado tras cada consulta | 100% localmente en el dispositivo | **Nunca** | Mostrar la evolución del saldo al usuario |
 | **Tarifa de Referencia** | Configurada por el usuario (por defecto $1.450) | 100% localmente (DataStore / SharedPreferences) | **Nunca** | Calcular viajes restantes disponibles |
 | **Imágenes de Captcha** | Descargadas temporalmente del portal de RedBus | En memoria RAM volátil | **Nunca** | Resolución automática del captcha en el equipo |
+| **Sesión RedBus (cookies)** | Portal oficial | CookieManager privado de la app | Solo a salta.miredbus.com.ar | Consultar tarjetas vinculadas sin captcha |
 
 ---
 
@@ -45,7 +46,18 @@ Para automatizar la consulta de saldo sin requerir intervención manual constant
 La aplicación únicamente realiza conexiones de red salientes hacia los servidores oficiales de consulta de transporte:
 - **Destino:** Servidor oficial de RedBus Salta (`https://salta.miredbus.com.ar`).
 - **Seguridad:** Todas las comunicaciones se realizan de forma obligatoria mediante **cifrado TLS 1.2 / TLS 1.3 (HTTPS)**. El tráfico en texto plano (`cleartext HTTP`) está expresamente deshabilitado a nivel del sistema operativo mediante [`network_security_config.xml`](android/app/src/main/res/xml/network_security_config.xml).
-- **Carga Útil:** La solicitud únicamente envía los parámetros técnicos requeridos por el servicio de consulta: número de tarjeta y texto del captcha resuelto. **No se envían identificadores del dispositivo (Android ID, IMEI, IMSI, dirección MAC ni ID de Publicidad de Google)**.
+- **Carga Útil (modo anónimo):** La solicitud únicamente envía los parámetros técnicos requeridos por el servicio de consulta: número de tarjeta y texto del captcha resuelto. **No se envían identificadores del dispositivo (Android ID, IMEI, IMSI, dirección MAC ni ID de Publicidad de Google)**.
+- **Desafío Turnstile (modo anónimo):** Para resolver la verificación automáticamente, la app puede ejecutar un desafío de Cloudflare Turnstile dentro de un WebView interno fuera de pantalla sobre el dominio oficial `salta.miredbus.com.ar` — el mismo desafío que el portal ejecuta en un navegador. No intervienen credenciales ni datos personales; si el desafío falla se recurre al captcha de imagen con OCR local.
+
+### 4.1 Conexión Opcional con Cuenta RedBus (Inicio de Sesión Web)
+
+Si decides conectar tu cuenta, la aplicación abre la página oficial de inicio de sesión de RedBus (`https://salta.miredbus.com.ar/login`) dentro de un WebView endurecido:
+
+- **Tus credenciales van directamente al portal oficial.** SAETA Saldo no incluye formulario de contraseña propio, no lee el contenido de la página (DOM) ni los campos que completas, y no utiliza puente JavaScript (`addJavascriptInterface`) ni ningún mecanismo para inspeccionar la página.
+- **Navegación restringida:** solo se permite navegar dentro del host exacto `salta.miredbus.com.ar` por HTTPS; cualquier otra dirección se bloquea.
+- **Errores TLS cancelan la carga:** ante un error de certificado la navegación se cancela en lugar de continuar.
+- **Cookies de sesión:** tras el inicio de sesión, las cookies del portal se conservan únicamente en el `CookieManager` privado de la aplicación y se envían solo a `salta.miredbus.com.ar` para consultar tus tarjetas vinculadas (número de tarjeta, saldo principal, tipo y estado). Nunca se guardan en archivos, bases de datos ni registros (logs) del desarrollador.
+- **La aplicación nunca recibe ni almacena tu contraseña de RedBus.**
 
 ---
 
@@ -69,6 +81,7 @@ De acuerdo con la **Ley Argentina N° 25.326 de Protección de los Datos Persona
 
 - **Modificación y Edición:** Puedes modificar el alias y la tarifa de cualquier tarjeta en cualquier momento desde la interfaz.
 - **Eliminación Total e Inmediata:** Al pulsar el botón de eliminar tarjeta, el registro y todo su historial de saldos asociado se purgan permanentemente de la base de datos local SQLite mediante eliminación en cascada (`CASCADE DELETE`).
+- **Desconexión de la cuenta RedBus:** La opción **"Desconectar"** del diálogo de cuenta elimina localmente las cookies de sesión del portal del dispositivo. Tus tarjetas, alias e historial locales permanecen intactos.
 - **Desinstalación:** Si desinstalas la aplicación desde los ajustes de Android, el sistema operativo elimina la totalidad de los datos y bases de datos locales asociadas sin que quede ningún remanente.
 
 ---
@@ -92,9 +105,10 @@ El código fuente completo de la aplicación es público y auditable por cualqui
 
 # English Summary
 
-- **Local-First:** All card data, aliases, and balance logs are stored 100% on-device in a local SQLite database. No external servers or cloud accounts exist.
+- **Local-First:** All card data, aliases, and balance logs are stored 100% on-device in a local SQLite database. The developer runs no external servers or cloud services of its own.
 - **Zero Trackers:** No analytics, advertising, or telemetry SDKs are included.
-- **Direct Queries:** HTTPS queries are made directly from your phone to `salta.miredbus.com.ar`. No device identifiers or personal info are transmitted.
+- **Direct Queries:** HTTPS queries are made directly from your phone to `salta.miredbus.com.ar`. No device identifiers or personal info are transmitted. Anonymous balance queries may run a Cloudflare Turnstile challenge inside an offscreen in-app WebView on the official domain — no credentials involved.
+- **Optional RedBus Account:** You may optionally log in on the official RedBus site inside a hardened in-app WebView. Credentials go straight to the official page — the app never reads or stores your password. Portal session cookies stay in the app's private CookieManager, are sent only to `salta.miredbus.com.ar`, and are deleted when you disconnect. Without an account, anonymous captcha mode works exactly the same.
 - **On-Device OCR:** Captchas are processed locally on your phone using Google ML Kit. No images are sent to the cloud.
-- **Data Deletion:** Deleting a card wipes all its associated history immediately. Uninstalling the app permanently purges all local data.
+- **Data Deletion:** Deleting a card wipes all its associated history immediately. Disconnecting the account removes the portal session cookies; your local cards and history remain. Uninstalling the app permanently purges all local data.
 - **Open Source:** Full source code is available for audit at [github.com/JuannIM/saetaapp](https://github.com/JuannIM/saetaapp).

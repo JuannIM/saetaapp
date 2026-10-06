@@ -6,10 +6,13 @@ import com.saetasaldo.app.data.local.entity.BalanceHistoryEntity
 import com.saetasaldo.app.data.local.entity.CardEntity
 import com.saetasaldo.app.data.remote.api.SaetaApiService
 import com.saetasaldo.app.data.remote.dto.SaldoRequestDto
+import com.saetasaldo.app.data.remote.dto.SaldoResponseDto
 import com.saetasaldo.app.domain.model.BalanceRecord
+import com.saetasaldo.app.domain.model.CardBalanceUpdate
 import com.saetasaldo.app.domain.model.CardType
 import com.saetasaldo.app.domain.model.SaetaCard
 import com.saetasaldo.app.domain.repository.CardRepository
+import com.saetasaldo.app.domain.repository.TurnstileTokenProvider
 import com.saetasaldo.app.domain.usecase.SolveCaptchaUseCase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
@@ -19,7 +22,8 @@ class CardRepositoryImpl(
     private val cardDao: CardDao,
     private val balanceHistoryDao: BalanceHistoryDao,
     private val apiService: SaetaApiService,
-    private val solveCaptchaUseCase: SolveCaptchaUseCase
+    private val solveCaptchaUseCase: SolveCaptchaUseCase,
+    private val turnstileProvider: TurnstileTokenProvider? = null
 ) : CardRepository {
 
     override fun getAllCards(): Flow<List<SaetaCard>> =
@@ -51,6 +55,12 @@ class CardRepositoryImpl(
         balanceHistoryDao.getHistoryForCardFlow(cardId).map { list -> list.map { it.toDomain() } }
 
     override suspend fun refreshCardBalance(cardNumber: String, manualCaptcha: String?): Result<SaetaCard> {
+        // A manual captcha skips the Turnstile attempt entirely: the portal
+        // validates it against the image captcha, not a token.
+        if (manualCaptcha == null) {
+            queryWithTurnstileToken(cardNumber)?.let { return it }
+        }
+
         val captchaCode = manualCaptcha ?: solveCaptchaUseCase().getOrElse {
             return Result.failure(it)
         }
@@ -68,53 +78,120 @@ class CardRepositoryImpl(
             val body = response.body()
                 ?: return Result.failure(IllegalStateException("Error de conexión con el servidor de RedBus"))
 
-            when (body.error) {
-                0 -> {
-                    val amount = body.balances?.firstOrNull()?.amount ?: body.effectiveBalance
-                    val state = body.cardState ?: "ACTIVA"
-
-                    // Find existing card by number or create stub
-                    val existing = cardDao.getCardByNumber(cardNumber)
-                    val cardType = body.cardType?.let { CardType.fromBackendString(it) }
-                        ?: existing?.type
-                        ?: CardType.AZUL_COMUN
-
-                    val updated = (existing ?: CardEntity(
-                        name = "Tarjeta SAETA",
-                        cardNumber = cardNumber,
-                        type = cardType
-                    )).copy(
-                        currentBalance = amount,
-                        lastUpdated = System.currentTimeMillis(),
-                        cardState = state,
-                        type = cardType
-                    )
-
-                    cardDao.insertCard(updated)
-
-                    // Record balance history change only if balance changed or it's the initial record
-                    val lastRecord = balanceHistoryDao.getLatestBalanceRecord(updated.id)
-                    if (lastRecord == null || amount != lastRecord.balance) {
-                        val diff = if (lastRecord != null) amount - lastRecord.balance else 0.0
-                        balanceHistoryDao.insertRecord(
-                            BalanceHistoryEntity(
-                                cardId = updated.id,
-                                balance = amount,
-                                difference = diff
-                            )
-                        )
-                    }
-
-                    Result.success(updated.toDomain())
-                }
-                1 -> Result.failure(IllegalArgumentException("Captcha incorrecto. Reintentá nuevamente."))
-                2 -> Result.failure(IllegalArgumentException("El número de tarjeta no existe en el sistema."))
-                else -> Result.failure(IllegalStateException(body.message ?: "Error desconocido en el portal"))
-            }
+            handleSaldoBody(cardNumber, body)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    /**
+     * Best-effort silent captcha via a Cloudflare Turnstile token. Returns the
+     * terminal outcomes (success, card-not-found) and `null` when the token
+     * path cannot resolve the query — rejected token, unknown portal error,
+     * HTTP or network failure — so the caller falls back to the
+     * image-captcha/OCR path.
+     */
+    private suspend fun queryWithTurnstileToken(cardNumber: String): Result<SaetaCard>? {
+        val provider = turnstileProvider ?: return null
+
+        val token = try {
+            provider.getToken().getOrElse { return null }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            return null
+        }
+
+        val response = try {
+            apiService.queryBalanceWithToken(
+                SaldoRequestDto(cardNumber = cardNumber, captchaCode = token)
+            )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            return null
+        }
+
+        if (!response.isSuccessful) {
+            response.errorBody()?.close()
+            return null
+        }
+        val body = response.body() ?: return null
+
+        return when (body.error) {
+            0, 2 -> handleSaldoBody(cardNumber, body)
+            else -> null
+        }
+    }
+
+    private suspend fun handleSaldoBody(cardNumber: String, body: SaldoResponseDto): Result<SaetaCard> =
+        when (body.error) {
+            0 -> {
+                val amount = body.balances?.firstOrNull()?.amount ?: body.effectiveBalance
+                val state = body.cardState ?: "ACTIVA"
+                val type = body.cardType?.let { CardType.fromBackendString(it) }
+
+                Result.success(
+                    applyBalanceUpdate(
+                        CardBalanceUpdate(
+                            cardNumber = cardNumber,
+                            balance = amount,
+                            cardType = type,
+                            cardState = state,
+                            suggestedName = null
+                        )
+                    )
+                )
+            }
+            1 -> Result.failure(IllegalArgumentException("Captcha incorrecto. Reintentá nuevamente."))
+            2 -> Result.failure(IllegalArgumentException("El número de tarjeta no existe en el sistema."))
+            else -> Result.failure(IllegalStateException(body.message ?: "Error desconocido en el portal"))
+        }
+
+    override suspend fun applyBalanceUpdate(update: CardBalanceUpdate): SaetaCard {
+        val cardNumber = update.cardNumber.trim()
+        require(cardNumber.isNotBlank()) { "Card number must not be blank" }
+        require(update.balance.isFinite()) { "Balance must be finite" }
+
+        val remoteState = update.cardState?.trim()?.takeIf { it.isNotEmpty() }
+        val suggestedName = update.suggestedName?.trim()?.takeIf { it.isNotEmpty() }
+
+        val existing = cardDao.getCardByNumber(cardNumber)
+        val updated = if (existing != null) {
+            existing.copy(
+                currentBalance = update.balance,
+                lastUpdated = System.currentTimeMillis(),
+                cardState = remoteState ?: existing.cardState,
+                type = update.cardType ?: existing.type
+            )
+        } else {
+            CardEntity(
+                name = suggestedName ?: "Tarjeta SAETA",
+                cardNumber = cardNumber,
+                type = update.cardType ?: CardType.AZUL_COMUN,
+                currentBalance = update.balance,
+                lastUpdated = System.currentTimeMillis(),
+                cardState = remoteState
+            )
+        }
+
+        cardDao.insertCard(updated)
+
+        // Record balance history change only if balance changed or it's the initial record
+        val lastRecord = balanceHistoryDao.getLatestBalanceRecord(updated.id)
+        if (lastRecord == null || update.balance != lastRecord.balance) {
+            val diff = if (lastRecord != null) update.balance - lastRecord.balance else 0.0
+            balanceHistoryDao.insertRecord(
+                BalanceHistoryEntity(
+                    cardId = updated.id,
+                    balance = update.balance,
+                    difference = diff
+                )
+            )
+        }
+
+        return updated.toDomain()
     }
 }
