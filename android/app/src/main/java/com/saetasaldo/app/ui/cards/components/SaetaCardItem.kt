@@ -106,6 +106,14 @@ fun SaetaCardItem(
                         fontSize = 32.sp,
                         fontWeight = FontWeight.ExtraBold
                     )
+                    card.tripsSubtitle()?.let {
+                        Text(
+                            text = it,
+                            color = Color.White.copy(alpha = 0.85f),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                     if (card.lastUpdated != null) {
                         val formattedTime = SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(Date(card.lastUpdated))
                         Text(

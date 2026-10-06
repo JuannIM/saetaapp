@@ -15,20 +15,25 @@ data class SaetaCard(
     val wallets: List<CardWallet> = emptyList()
 ) {
     /**
-     * Balance rendered the way the backend declares it — except when the
-     * principal money wallet is mislabeled as passage units, in which case the
-     * peso amount is converted to real trips by fare ("≈ 2 pasajes"). Falls
-     * back to a currency format for anonymous lookups without wallet metadata.
+     * The primary display is always the real money amount. When the backend
+     * mislabels the money wallet as passage units (" pasajes" on "Principal
+     * (Dinero)"), the suffix is ignored — [tripsSubtitle] exposes the trip
+     * count as secondary info instead.
      */
-    fun formattedBalance(fare: Double = CardWallet.DEFAULT_FARE): String {
+    fun formattedBalance(): String {
         val wallet = wallets.principalWallet
-        if (wallet != null) {
-            return if (wallet.isMoneyWalletInPassageUnits()) {
-                wallet.formattedAsTrips(fare)
-            } else {
-                wallet.formattedBalance()
-            }
+        if (wallet != null && !wallet.isMoneyWalletInPassageUnits()) {
+            return wallet.formattedBalance()
         }
         return currentBalance?.let { "$ %.2f".format(it) } ?: "$ --"
     }
+
+    /**
+     * "≈ 2 pasajes" when the principal wallet is money denominated in passage
+     * units; null when the concept does not apply to this card.
+     */
+    fun tripsSubtitle(fare: Double = CardWallet.DEFAULT_FARE): String? =
+        wallets.principalWallet
+            ?.takeIf { it.isMoneyWalletInPassageUnits() }
+            ?.formattedAsTrips(fare)
 }

@@ -44,7 +44,7 @@ class CardWalletTest {
     }
 
     @Test
-    fun `card formattedBalance converts money wallet in passage units to trips`() {
+    fun `card formattedBalance shows money and tripsSubtitle shows trips`() {
         val card = SaetaCard(
             id = "1",
             name = "Test",
@@ -59,8 +59,10 @@ class CardWalletTest {
                 )
             )
         )
-        // 3170 pesos / 1450 tarifa = 2 viajes reales, no "3170 pasajes"
-        assertEquals("≈ 2 pasajes", card.formattedBalance())
+        // El saldo real en pesos sigue siendo el display principal;
+        // los viajes estimados van como subtítulo ("3170 pasajes" era engañoso).
+        assertEquals("$ 3170.00", card.formattedBalance())
+        assertEquals("≈ 2 pasajes", card.tripsSubtitle())
         assertEquals("≈ 1 pasaje", card.copy(
             wallets = listOf(CardWallet(
                 name = "Principal (Dinero)",
@@ -68,7 +70,23 @@ class CardWalletTest {
                 isPassageUnit = true,
                 suffix = " pasajes"
             ))
-        ).formattedBalance())
+        ).tripsSubtitle())
+    }
+
+    @Test
+    fun `tripsSubtitle is null for plain money wallets and anonymous cards`() {
+        val moneyCard = SaetaCard(
+            id = "1",
+            name = "Test",
+            cardNumber = "123",
+            currentBalance = 1450.5,
+            wallets = listOf(
+                CardWallet(name = "Principal (Dinero)", balance = 1450.5, prefix = "$")
+            )
+        )
+        assertEquals(null, moneyCard.tripsSubtitle())
+        val anon = SaetaCard(id = "2", name = "Anon", cardNumber = "456", currentBalance = 900.0)
+        assertEquals(null, anon.tripsSubtitle())
     }
 
     @Test

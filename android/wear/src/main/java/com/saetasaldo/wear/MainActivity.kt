@@ -36,6 +36,7 @@ private const val PATH_BALANCE = "/saeta/balance"
 private const val PATH_REFRESH_REQUEST = "/saeta/refresh"
 private const val KEY_NAME = "name"
 private const val KEY_BALANCE = "balance"
+private const val KEY_TRIPS = "trips"
 private const val KEY_UPDATED = "updated"
 private const val KEY_HAS_CARD = "hasCard"
 
@@ -43,6 +44,7 @@ data class BalanceSnapshot(
     val hasCard: Boolean = false,
     val name: String = "",
     val balance: String = "",
+    val trips: String? = null,
     val updated: Long = 0L
 )
 
@@ -113,6 +115,7 @@ class MainActivity : ComponentActivity(), DataClient.OnDataChangedListener {
             hasCard = map.getBoolean(KEY_HAS_CARD),
             name = map.getString(KEY_NAME).orEmpty(),
             balance = map.getString(KEY_BALANCE).orEmpty(),
+            trips = map.getString(KEY_TRIPS),
             updated = map.getLong(KEY_UPDATED)
         )
     }
@@ -154,6 +157,14 @@ fun WearBalanceScreen(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(vertical = 4.dp)
             )
+            snapshot.trips?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.caption1,
+                    color = MaterialTheme.colors.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
             if (snapshot.updated > 0) {
                 val time = SimpleDateFormat("dd/MM HH:mm", Locale.getDefault())
                     .format(Date(snapshot.updated))

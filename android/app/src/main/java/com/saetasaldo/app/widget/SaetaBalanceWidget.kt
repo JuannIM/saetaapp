@@ -81,6 +81,16 @@ class SaetaBalanceWidget : GlanceAppWidget() {
                         modifier = GlanceModifier.padding(vertical = 4.dp)
                     )
 
+                    card?.toDomain()?.tripsSubtitle()?.let { trips ->
+                        Text(
+                            text = trips,
+                            style = TextStyle(
+                                fontSize = 12.sp,
+                                color = GlanceTheme.colors.onSurfaceVariant
+                            )
+                        )
+                    }
+
                     Row(
                         modifier = GlanceModifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically

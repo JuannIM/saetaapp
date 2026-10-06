@@ -19,6 +19,7 @@ class WearSyncManager(private val context: Context) {
         const val PATH_REFRESH_REQUEST = "/saeta/refresh"
         const val KEY_NAME = "name"
         const val KEY_BALANCE = "balance"
+        const val KEY_TRIPS = "trips"
         const val KEY_UPDATED = "updated"
         const val KEY_HAS_CARD = "hasCard"
     }
@@ -30,6 +31,7 @@ class WearSyncManager(private val context: Context) {
                 if (card != null) {
                     dataMap.putString(KEY_NAME, card.name)
                     dataMap.putString(KEY_BALANCE, card.formattedBalance())
+                    card.tripsSubtitle()?.let { dataMap.putString(KEY_TRIPS, it) }
                     dataMap.putLong(KEY_UPDATED, card.lastUpdated ?: 0L)
                 }
                 // Timestamp forces delivery even when the payload is unchanged.
