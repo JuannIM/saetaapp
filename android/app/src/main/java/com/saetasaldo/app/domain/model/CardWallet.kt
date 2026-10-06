@@ -25,8 +25,24 @@ data class CardWallet(
             .joinToString(" ")
     }
 
+    /**
+     * The principal wallet is a *money* wallet even when the backend labels it
+     * `unidadPasajes: true` with a " pasajes" suffix — the number is pesos and
+     * showing "3170 pasajes" is misleading. Convert to real trips by fare.
+     */
+    fun formattedAsTrips(fare: Double): String {
+        val safeFare = if (fare <= 0.0 || fare.isNaN()) DEFAULT_FARE else fare
+        val trips = kotlin.math.floor(balance / safeFare).toInt()
+        return "≈ $trips ${if (trips == 1) "pasaje" else "pasajes"}"
+    }
+
+    /** True when this wallet holds money mislabeled as passage units. */
+    fun isMoneyWalletInPassageUnits(): Boolean =
+        isPassageUnit && name.equals(PRINCIPAL_WALLET_NAME, ignoreCase = true)
+
     companion object {
         const val PRINCIPAL_WALLET_NAME = "Principal (Dinero)"
+        const val DEFAULT_FARE = 1450.0
     }
 }
 

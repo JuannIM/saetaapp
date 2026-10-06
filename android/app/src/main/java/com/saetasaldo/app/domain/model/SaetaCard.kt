@@ -15,13 +15,20 @@ data class SaetaCard(
     val wallets: List<CardWallet> = emptyList()
 ) {
     /**
-     * Balance rendered the way the backend declares it: "3170 pasajes" for
-     * passage-unit wallets, "$ 1450.50" for money wallets. Falls back to a
-     * currency format for anonymous lookups that carry no wallet metadata.
+     * Balance rendered the way the backend declares it — except when the
+     * principal money wallet is mislabeled as passage units, in which case the
+     * peso amount is converted to real trips by fare ("≈ 2 pasajes"). Falls
+     * back to a currency format for anonymous lookups without wallet metadata.
      */
-    fun formattedBalance(): String {
+    fun formattedBalance(fare: Double = CardWallet.DEFAULT_FARE): String {
         val wallet = wallets.principalWallet
-        if (wallet != null) return wallet.formattedBalance()
+        if (wallet != null) {
+            return if (wallet.isMoneyWalletInPassageUnits()) {
+                wallet.formattedAsTrips(fare)
+            } else {
+                wallet.formattedBalance()
+            }
+        }
         return currentBalance?.let { "$ %.2f".format(it) } ?: "$ --"
     }
 }
