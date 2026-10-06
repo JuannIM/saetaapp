@@ -275,7 +275,7 @@ in an offscreen WebView — works for every card, no account required.
 - [x] WebView destroyed on completion/cancellation; TLS errors cancel.
 
 **Verification:**
-- [ ] `gradle testDebugUnitTest --tests "*CardRepositoryTest" --stacktrace`
-- [ ] `gradle assembleDebug --stacktrace`
-- [ ] Real device: turnstile token query works end-to-end.
+- [x] `gradle testDebugUnitTest --stacktrace` — CI run 37393301109 green.
+- [x] `gradle assembleDebug --stacktrace` — CI run 37393301109 green.
+- [x] Real device: turnstile token query works end-to-end (verified 2026-10-06).
 
