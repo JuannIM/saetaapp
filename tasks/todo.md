@@ -259,3 +259,23 @@ and prepare a human-reviewed feature branch.
 - [ ] All automated and manual checks pass.
 - [ ] The human explicitly approves the complete diff.
 - [ ] Push only `feature/redbus-account-session`; do not push directly to `main`.
+
+## Task 14: Turnstile Token Resolver (Captcha-Free Anonymous Queries)
+
+**Goal:** resolve the captcha silently via a Cloudflare Turnstile token rendered
+in an offscreen WebView — works for every card, no account required.
+
+**Acceptance criteria:**
+- [ ] `GET /rest/getTurnstileKeySite` returns the plaintext sitekey.
+- [ ] `resultadoSaldo` is called with `X-Use-New-Captcha: true` + token.
+- [ ] Token path success never requests `captcha.png` nor runs OCR.
+- [ ] Token failure/error 1/network failure falls back to OCR, then manual.
+- [ ] Manual captcha bypasses the provider entirely.
+- [ ] Widget path never creates the WebView provider.
+- [ ] WebView destroyed on completion/cancellation; TLS errors cancel.
+
+**Verification:**
+- [ ] `gradle testDebugUnitTest --tests "*CardRepositoryTest" --stacktrace`
+- [ ] `gradle assembleDebug --stacktrace`
+- [ ] Real device: turnstile token query works end-to-end.
+

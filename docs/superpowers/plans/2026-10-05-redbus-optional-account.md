@@ -1159,6 +1159,72 @@ Do not push directly to `main`. Do not open a pull request without reading the
 repository template, searching open and closed PRs, showing the complete diff,
 and receiving explicit human approval.
 
+
+### Task 14: Turnstile Token Resolver (Captcha-Free Anonymous Queries)
+
+Context verified on the live portal (2026-10-05):
+
+- `GET /rest/getTurnstileKeySite` returns the Turnstile sitekey as plaintext,
+  no authentication needed.
+- The public consulta page sends `verificacionCaptcha` = Turnstile token plus
+  header `X-Use-New-Captcha: true` to `POST /rest/tarjetaInternal/resultadoSaldo`.
+- Without that header the same field is validated against the image captcha
+  (the existing OCR path).
+- A valid session does NOT remove captcha on `resultadoSaldo` (probed: error 1).
+- The widget self-solves on the site; it refuses automation-flagged browsers
+  (Playwright Chrome gets error 600010) but runs in a real Android WebView.
+
+Design:
+
+- Domain: `TurnstileTokenProvider { suspend fun getToken(): Result<String> }`.
+- `SaetaApiService`: add `GET("rest/getTurnstileKeySite")` returning
+  `ResponseBody`, and a token variant of `queryBalance` that adds
+  `@Header("X-Use-New-Captcha") "true"`.
+- Android impl `WebViewTurnstileTokenProvider` (`ui/turnstile/`): offscreen
+  WebView on the main thread, loads `https://salta.miredbus.com.ar/`, injects
+  `turnstile.render` via `evaluateJavascript`, token returns through a one-way
+  `@JavascriptInterface` bridge (`onToken`/`onError`). Suspend with
+  `withTimeoutOrNull` (~45s, injectable), always destroy the WebView, rethrow
+  `CancellationException`. Reuse `isAllowedMainFrame` allowlist; TLS errors
+  cancel; file/content/mixed-content disabled. A JS bridge is permitted here
+  ONLY because the page is the public anonymous one — no credentials or session
+  cookies are involved; document this contrast with the login WebView.
+- `CardRepositoryImpl`: optional `turnstileProvider` ctor param. When
+  `manualCaptcha == null` and provider present, try token path first; success
+  (`error` 0 or 2) shares the existing response handling; token failure,
+  `error` 1, or network failure falls through to the OCR path. Manual captcha
+  skips the provider entirely.
+- Widget keeps its current repository instance without the provider — no
+  WebView is ever created in a cold widget process.
+- `MainActivity`: construct the provider lazily on the main thread and inject
+  it into the app-facing repository only.
+
+Tests:
+
+- Repo with a fake provider: token path uses header + token and never requests
+  `captcha.png`; provider failure falls back to OCR; `error` 1 falls back to
+  OCR; manual captcha bypasses the provider; cancellation propagates.
+- Sitekey endpoint returns the plaintext key.
+- Robolectric: provider surfaces failure instead of hanging when the page or
+  widget fails.
+
+Docs:
+
+- README: describe the Turnstile token mode and the fallback chain.
+- `PRIVACY_POLICY.md` + in-app content: disclose that balance queries may run a
+  Cloudflare Turnstile challenge inside a WebView on the official domain.
+- ADR `0001`: addendum noting the second WebView carries a one-way JS bridge,
+  why that is safe on the anonymous page, and why the login WebView still
+  forbids it.
+
+Risks:
+
+- Tokens are single-use and short-lived: v1 generates one per query attempt.
+- Turnstile may demand interaction: timeout falls back to OCR, then to the
+  manual captcha dialog — UX degrades, never breaks.
+- Grey-area ToS: this reproduces what the provider's own site and official app
+  do; flag for the provider-authorization review before public release.
+
 ## Checkpoints
 
 ### Contract Checkpoint: After Task 0
