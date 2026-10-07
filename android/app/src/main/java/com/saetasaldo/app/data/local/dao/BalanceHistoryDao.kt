@@ -9,10 +9,10 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface BalanceHistoryDao {
-    @Query("SELECT * FROM balance_history WHERE cardId = :cardId ORDER BY timestamp DESC")
+    @Query("SELECT * FROM balance_history WHERE cardId = :cardId ORDER BY timestamp DESC, id DESC")
     fun getHistoryForCardFlow(cardId: String): Flow<List<BalanceHistoryEntity>>
 
-    @Query("SELECT * FROM balance_history WHERE cardId = :cardId ORDER BY timestamp DESC LIMIT 1")
+    @Query("SELECT * FROM balance_history WHERE cardId = :cardId ORDER BY timestamp DESC, id DESC LIMIT 1")
     suspend fun getLatestBalanceRecord(cardId: String): BalanceHistoryEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

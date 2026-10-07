@@ -82,6 +82,7 @@ import java.util.Locale
 @Composable
 fun CardDetailScreen(
     viewModel: CardDetailViewModel,
+    refreshOnOpen: Boolean,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -115,7 +116,8 @@ fun CardDetailScreen(
     }
 
     LaunchedEffect(card?.id) {
-        if (card != null && card?.lastUpdated == 0L) {
+        val current = card ?: return@LaunchedEffect
+        if (refreshOnOpen || current.lastUpdated == null) {
             viewModel.refreshBalance()
         }
     }
@@ -352,8 +354,7 @@ fun CardDetailScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.updateCardName(newName)
-                        viewModel.updateCardColor(selectedColor)
+                        viewModel.updateCard(newName, selectedColor)
                         showRenameDialog = false
                     }
                 ) {

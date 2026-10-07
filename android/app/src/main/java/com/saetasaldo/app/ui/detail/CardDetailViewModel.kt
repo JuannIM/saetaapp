@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -37,25 +38,29 @@ class CardDetailViewModel(
     private val _pendingLoads = MutableStateFlow<List<PendingLoad>?>(null)
     val pendingLoads: StateFlow<List<PendingLoad>?> = _pendingLoads.asStateFlow()
 
-    init {
-        // Pending virtual loads only exist for account-linked cards.
-        viewModelScope.launch {
-            card.collect { current ->
-                val nroInterno = current?.internalNumber
-                if (nroInterno != null &&
-                    accountRepository?.sessionState?.value == RedBusSessionState.Connected
-                ) {
-                    _pendingLoads.value = accountRepository.getPendingLoads(nroInterno).getOrNull()
-                } else if (nroInterno == null) {
-                    _pendingLoads.value = null
-                }
-            }
-        }
-    }
-
     val card: StateFlow<SaetaCard?> = repository.getAllCards()
         .map { list -> list.firstOrNull { it.id == cardId } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    init {
+        // Pending virtual loads only exist for account-linked cards.
+        if (accountRepository != null) {
+            viewModelScope.launch {
+                combine(
+                    card.map { it?.internalNumber },
+                    accountRepository.sessionState
+                ) { number, state -> number to state }
+                    .distinctUntilChanged()
+                    .collect { (number, state) ->
+                        when {
+                            number == null -> _pendingLoads.value = null
+                            state == RedBusSessionState.Connected ->
+                                _pendingLoads.value = accountRepository.getPendingLoads(number).getOrNull()
+                        }
+                    }
+            }
+        }
+    }
 
     val history: StateFlow<List<BalanceRecord>> = repository.getHistoryForCard(cardId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -158,20 +163,15 @@ class CardDetailViewModel(
         }
     }
 
-    fun updateCardColor(colorArgb: Int?) {
+    fun updateCard(newName: String, colorArgb: Int?) {
         val currentCard = card.value ?: return
         viewModelScope.launch {
-            repository.saveCard(currentCard.copy(colorArgb = colorArgb))
-        }
-    }
-
-    fun updateCardName(newName: String) {
-        val currentCard = card.value ?: return
-        val trimmed = newName.trim()
-        if (trimmed.isNotBlank()) {
-            viewModelScope.launch {
-                repository.saveCard(currentCard.copy(name = trimmed))
-            }
+            repository.saveCard(
+                currentCard.copy(
+                    name = newName.trim().ifBlank { currentCard.name },
+                    colorArgb = colorArgb
+                )
+            )
         }
     }
 

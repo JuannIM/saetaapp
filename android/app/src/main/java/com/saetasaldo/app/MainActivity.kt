@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.lifecycleScope
 import com.saetasaldo.app.data.local.SaetaDatabase
 import com.saetasaldo.app.data.nfc.AndroidNfcManager
@@ -65,12 +66,16 @@ import com.saetasaldo.app.ui.nfc.NfcScanBottomSheet
 import com.saetasaldo.app.ui.theme.SaetaSaldoTheme
 import com.saetasaldo.app.ui.turnstile.WebViewTurnstileTokenProvider
 import com.saetasaldo.app.wear.WearSyncManager
+import com.saetasaldo.app.widget.SaetaBalanceWidget
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 sealed interface Screen {
     data object CardsList : Screen
-    data class CardDetail(val cardId: String) : Screen
+    data class CardDetail(val cardId: String, val refreshOnOpen: Boolean = false) : Screen
     data object RedBusLogin : Screen
 }
 
@@ -125,7 +130,7 @@ class MainActivity : ComponentActivity() {
         redBusAccountViewModel = RedBusAccountViewModel(accountRepository, syncRedBusCardsUseCase)
 
         getCardBalanceUseCase = GetCardBalanceUseCase(repository, accountRepository)
-        cardsViewModel = CardsViewModel(repository, getCardBalanceUseCase, refreshAllBalancesUseCase)
+        cardsViewModel = CardsViewModel(repository, refreshAllBalancesUseCase)
 
         setContent {
             SaetaSaldoTheme {
@@ -193,7 +198,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalCoroutinesApi::class)
 @Composable
 fun SaetaAppContent(
     cardsViewModel: CardsViewModel,
@@ -223,9 +228,13 @@ fun SaetaAppContent(
     val context = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(Unit) {
         val sync = WearSyncManager(context)
-        repository.getAllCards().collect { cards ->
-            sync.pushFavoriteCard(cards.firstOrNull { it.isFavorite })
-        }
+        repository.getAllCards()
+            .map { cards -> cards.firstOrNull { it.isFavorite } }
+            .distinctUntilChanged()
+            .collect { favorite ->
+                sync.pushFavoriteCard(favorite)
+                SaetaBalanceWidget().updateAll(context)
+            }
     }
 
     // Handle NFC tag scanned events
@@ -235,8 +244,7 @@ fun SaetaAppContent(
             showNfcBottomSheet = false
             when (val result = processNfcScanUseCase(uid)) {
                 is com.saetasaldo.app.domain.usecase.NfcScanResult.ExistingCardFound -> {
-                    getCardBalanceUseCase(result.card.cardNumber)
-                    currentScreen = Screen.CardDetail(result.card.id)
+                    currentScreen = Screen.CardDetail(result.card.id, refreshOnOpen = true)
                 }
                 is com.saetasaldo.app.domain.usecase.NfcScanResult.NewCardDiscovered -> {
                     newCardPrompt = NewCardPromptState(nfcUid = result.nfcUid)
@@ -281,6 +289,7 @@ fun SaetaAppContent(
             }
             CardDetailScreen(
                 viewModel = detailViewModel,
+                refreshOnOpen = screen.refreshOnOpen,
                 onBackClick = {
                     currentScreen = Screen.CardsList
                 }
@@ -327,7 +336,7 @@ fun SaetaAppContent(
                 ) { result ->
                     val saved = result.getOrNull()
                     if (saved != null) {
-                        currentScreen = Screen.CardDetail(saved.id)
+                        currentScreen = Screen.CardDetail(saved.id, refreshOnOpen = true)
                     }
                 }
                 newCardPrompt = null

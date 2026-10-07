@@ -2,12 +2,16 @@ package com.saetasaldo.app.ui.detail
 
 import com.saetasaldo.app.domain.model.BalanceRecord
 import com.saetasaldo.app.domain.model.CardType
+import com.saetasaldo.app.domain.model.PendingLoad
+import com.saetasaldo.app.domain.model.RedBusSessionState
 import com.saetasaldo.app.domain.model.SaetaCard
 import com.saetasaldo.app.domain.repository.CardRepository
+import com.saetasaldo.app.domain.repository.RedBusAccountRepository
 import com.saetasaldo.app.domain.usecase.CalculateRemainingTripsUseCase
 import com.saetasaldo.app.domain.usecase.GetCardBalanceUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -15,6 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -22,6 +27,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -42,19 +48,61 @@ class CardDetailViewModelTest {
         type = CardType.AZUL_COMUN
     )
 
+    private val linkedCard = testCard.copy(internalNumber = "90000001")
+
     private val cardsFlow = MutableStateFlow<List<SaetaCard>>(listOf(testCard))
     private val historyFlow = MutableStateFlow<List<BalanceRecord>>(emptyList())
+    private lateinit var sessionFlow: MutableStateFlow<RedBusSessionState>
+    private val accountRepository = mockk<RedBusAccountRepository>()
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         coEvery { repository.getAllCards() } returns cardsFlow
         coEvery { repository.getHistoryForCard("card-1") } returns historyFlow
+        sessionFlow = MutableStateFlow(RedBusSessionState.Unknown)
+        every { accountRepository.sessionState } returns sessionFlow
+        coEvery { accountRepository.getPendingLoads("90000001") } returns
+            Result.success(listOf(PendingLoad(amount = 500.0)))
     }
 
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+    }
+
+    @Test
+    fun `constructing on an immediate dispatcher loads pending loads once per internal number`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        cardsFlow.value = listOf(linkedCard)
+        sessionFlow.value = RedBusSessionState.Connected
+        val viewModel = CardDetailViewModel(
+            cardId = "card-1",
+            repository = repository,
+            getCardBalanceUseCase = getCardBalanceUseCase,
+            accountRepository = accountRepository
+        )
+        assertEquals(listOf(PendingLoad(amount = 500.0)), viewModel.pendingLoads.value)
+
+        cardsFlow.value = listOf(linkedCard.copy(currentBalance = 100.0))
+        coVerify(exactly = 1) { accountRepository.getPendingLoads("90000001") }
+    }
+
+    @Test
+    fun `pending loads load when the session connects after the detail opened`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        cardsFlow.value = listOf(linkedCard)
+        val viewModel = CardDetailViewModel(
+            cardId = "card-1",
+            repository = repository,
+            getCardBalanceUseCase = getCardBalanceUseCase,
+            accountRepository = accountRepository
+        )
+        assertNull(viewModel.pendingLoads.value)
+
+        sessionFlow.value = RedBusSessionState.Connected
+        assertEquals(listOf(PendingLoad(amount = 500.0)), viewModel.pendingLoads.value)
+        coVerify(exactly = 1) { accountRepository.getPendingLoads("90000001") }
     }
 
     @Test
@@ -172,7 +220,7 @@ class CardDetailViewModelTest {
     }
 
     @Test
-    fun `updateCardName saves card with updated name`() = runTest {
+    fun `updateCard saves name and color in a single write`() = runTest {
         val viewModel = CardDetailViewModel(
             cardId = "card-1",
             repository = repository,
@@ -182,10 +230,28 @@ class CardDetailViewModelTest {
         backgroundScope.launch { viewModel.card.collect() }
         advanceUntilIdle()
 
-        viewModel.updateCardName("Nueva Saeta")
+        viewModel.updateCard("Nueva Saeta", 0xFF1B5E20.toInt())
         advanceUntilIdle()
 
-        coVerify(exactly = 1) { repository.saveCard(match { it.id == "card-1" && it.name == "Nueva Saeta" }) }
+        coVerify(exactly = 1) { repository.saveCard(any()) }
+        coVerify { repository.saveCard(match { it.id == "card-1" && it.name == "Nueva Saeta" && it.colorArgb == 0xFF1B5E20.toInt() }) }
+    }
+
+    @Test
+    fun `updateCard with a blank name keeps the current name`() = runTest {
+        val viewModel = CardDetailViewModel(
+            cardId = "card-1",
+            repository = repository,
+            getCardBalanceUseCase = getCardBalanceUseCase,
+            calculateRemainingTripsUseCase = calculateRemainingTripsUseCase
+        )
+        backgroundScope.launch { viewModel.card.collect() }
+        advanceUntilIdle()
+
+        viewModel.updateCard("   ", null)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { repository.saveCard(match { it.name == "Mi Saeta" && it.colorArgb == null }) }
     }
 
     @Test

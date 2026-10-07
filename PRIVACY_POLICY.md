@@ -1,6 +1,6 @@
 # Política de Privacidad / Privacy Policy — SAETA Saldo Android
 
-**Última actualización / Last updated:** 5 de Octubre de 2026\
+**Última actualización / Last updated:** 7 de Octubre de 2026\
 **Aplicación / Application:** SAETA Saldo (com.saetasaldo.app)\
 **Desarrollador / Developer:** Juan Ignacio Mercado (Proyecto de Código Abierto / Open Source Project)\
 **Repositorio / Repository:** [https://github.com/JuannIM/saetaapp](https://github.com/JuannIM/saetaapp)
@@ -25,15 +25,17 @@ La aplicación opera bajo el principio estricto de **Privacidad por Diseño (Pri
 | **Número de Tarjeta SAETA** | Ingresado manualmente, leído por NFC o sincronizado desde tu cuenta RedBus (opcional) | 100% localmente en el dispositivo (SQLite Room) | Exclusivamente al portal oficial de MiRedBus Salta vía HTTPS (modo anónimo con captcha, o sesión autenticada opcional) | Consultar el saldo oficial |
 | **Alias de la Tarjeta** | Ingresado por el usuario (ej. "Mi Tarjeta") | 100% localmente en el dispositivo | **Nunca** | Identificación visual en la UI |
 | **Historial de Saldos** | Calculado tras cada consulta | 100% localmente en el dispositivo | **Nunca** | Mostrar la evolución del saldo al usuario |
-| **Tarifa de Referencia** | Configurada por el usuario (por defecto $1.450) | 100% localmente (DataStore / SharedPreferences) | **Nunca** | Calcular viajes restantes disponibles |
+| **Tarifa de Referencia** | Configurada por el usuario en el detalle de la tarjeta (por defecto $1.450) | Solo en memoria mientras el detalle está abierto (no se guarda) | **Nunca** | Calcular viajes restantes disponibles |
 | **Imágenes de Captcha** | Descargadas temporalmente del portal de RedBus | En memoria RAM volátil | **Nunca** | Resolución automática del captcha en el equipo |
 | **Sesión RedBus (cookies)** | Portal oficial | CookieManager privado de la app | Solo a salta.miredbus.com.ar | Consultar tarjetas vinculadas sin captcha |
+| **Monederos, número interno, descripción y cargas pendientes** (cuenta RedBus opcional) | Portal oficial, a través de tu sesión | Localmente en el dispositivo (SQLite Room); las cargas pendientes, solo en memoria | **Nunca** | Mostrar el saldo de cada monedero y avisar cargas pendientes de acreditación |
+| **Resumen de la tarjeta favorita** (alias, saldo, viajes estimados, hora de actualización) | Calculado en el teléfono | Teléfono y reloj Wear OS vinculado | Solo a tu propio reloj, mediante Google Play Services (Wearable Data Layer) | Mostrar el saldo en el reloj |
 
 ---
 
 ## 3. Procesamiento de Captcha en el Dispositivo (On-Device OCR)
 
-Para automatizar la consulta de saldo sin requerir intervención manual constante, la aplicación utiliza la biblioteca **Google ML Kit Text Recognition** (`com.google.android.gms:play-services-mlkit-text-recognition`).
+Para automatizar la consulta de saldo sin requerir intervención manual constante, la aplicación utiliza la biblioteca **Google ML Kit Text Recognition** (`com.google.mlkit:text-recognition`, con el modelo incluido en la app).
 
 - El procesamiento óptico de caracteres (OCR) se ejecuta **completamente de forma local en el procesador del dispositivo (on-device)**.
 - El mapa de bits (bitmap) del captcha se procesa en memoria volátil y se libera inmediatamente una vez obtenido el texto.
@@ -43,11 +45,11 @@ Para automatizar la consulta de saldo sin requerir intervención manual constant
 
 ## 4. Comunicaciones de Red y Conectividad
 
-La aplicación únicamente realiza conexiones de red salientes hacia los servidores oficiales de consulta de transporte:
+La aplicación realiza conexiones de red salientes hacia los servidores oficiales de consulta de transporte y hacia el servicio anti-bots que usa el propio portal:
 - **Destino:** Servidor oficial de RedBus Salta (`https://salta.miredbus.com.ar`).
 - **Seguridad:** Todas las comunicaciones se realizan de forma obligatoria mediante **cifrado TLS 1.2 / TLS 1.3 (HTTPS)**. El tráfico en texto plano (`cleartext HTTP`) está expresamente deshabilitado a nivel del sistema operativo mediante [`network_security_config.xml`](android/app/src/main/res/xml/network_security_config.xml).
 - **Carga Útil (modo anónimo):** La solicitud únicamente envía los parámetros técnicos requeridos por el servicio de consulta: número de tarjeta y texto del captcha resuelto. **No se envían identificadores del dispositivo (Android ID, IMEI, IMSI, dirección MAC ni ID de Publicidad de Google)**.
-- **Desafío Turnstile (modo anónimo):** Para resolver la verificación automáticamente, la app puede ejecutar un desafío de Cloudflare Turnstile dentro de un WebView interno fuera de pantalla sobre el dominio oficial `salta.miredbus.com.ar` — el mismo desafío que el portal ejecuta en un navegador. No intervienen credenciales ni datos personales; si el desafío falla se recurre al captcha de imagen con OCR local.
+- **Desafío Turnstile (modo anónimo):** Para resolver la verificación automáticamente, la app puede ejecutar un desafío de Cloudflare Turnstile dentro de un WebView interno fuera de pantalla sobre el dominio oficial `salta.miredbus.com.ar` — el mismo desafío que el portal ejecuta en un navegador. El desafío lo provee Cloudflare (`challenges.cloudflare.com`), que procesa datos técnicos de la conexión y del navegador (como la dirección IP) para distinguir personas de bots, según su propia política de privacidad. No intervienen credenciales; si el desafío falla se recurre al captcha de imagen con OCR local.
 
 ### 4.1 Conexión Opcional con Cuenta RedBus (Inicio de Sesión Web)
 
@@ -56,14 +58,18 @@ Si decides conectar tu cuenta, la aplicación abre la página oficial de inicio 
 - **Tus credenciales van directamente al portal oficial.** SAETA Saldo no incluye formulario de contraseña propio, no lee el contenido de la página (DOM) ni los campos que completas, y no utiliza puente JavaScript (`addJavascriptInterface`) ni ningún mecanismo para inspeccionar la página.
 - **Navegación restringida:** solo se permite navegar dentro del host exacto `salta.miredbus.com.ar` por HTTPS; cualquier otra dirección se bloquea.
 - **Errores TLS cancelan la carga:** ante un error de certificado la navegación se cancela en lugar de continuar.
-- **Cookies de sesión:** tras el inicio de sesión, las cookies del portal se conservan únicamente en el `CookieManager` privado de la aplicación y se envían solo a `salta.miredbus.com.ar` para consultar tus tarjetas vinculadas (número de tarjeta, saldo principal, tipo y estado). Nunca se guardan en archivos, bases de datos ni registros (logs) del desarrollador.
+- **Cookies de sesión:** tras el inicio de sesión, las cookies del portal se conservan únicamente en el `CookieManager` privado de la aplicación y se envían solo a `salta.miredbus.com.ar` para consultar tus tarjetas vinculadas (número de tarjeta, saldo principal y de los demás monederos, tipo, estado, número interno, descripción y cargas pendientes de acreditación). Nunca se guardan en archivos, bases de datos ni registros (logs) del desarrollador.
 - **La aplicación nunca recibe ni almacena tu contraseña de RedBus.**
+
+### 4.2 Reloj Wear OS (Opcional)
+
+Si tienes un reloj Wear OS vinculado con SAETA Saldo instalado, el teléfono le envía el alias, el saldo, la estimación de viajes y la hora de la última actualización de tu tarjeta favorita mediante la API **Wearable Data Layer de Google Play Services**, que sincroniza esos datos entre tus dispositivos. El reloj no se conecta al portal: solo muestra lo que recibe del teléfono y puede pedirle que actualice el saldo.
 
 ---
 
 ## 5. Permisos de la Aplicación y Justificación
 
-La aplicación solicita exclusivamente los permisos técnicos estrictamente indispensables para su funcionamiento:
+La aplicación solicita los siguientes permisos (algunos los agrega automáticamente una biblioteca de Android Jetpack):
 
 1. **`android.permission.NFC`**:
    - **Justificación:** Se utiliza de manera interactiva en primer plano (foreground dispatch) para leer el UID del chip contactless de la tarjeta SAETA física cuando el usuario la apoya en el sensor NFC del teléfono.
@@ -71,7 +77,11 @@ La aplicación solicita exclusivamente los permisos técnicos estrictamente indi
 2. **`android.permission.INTERNET`**:
    - **Justificación:** Necesario para emitir la petición HTTP segura al servidor de MiRedBus y obtener el saldo.
 3. **`android.permission.ACCESS_NETWORK_STATE`**:
-   - **Justificación:** Verifica si el dispositivo cuenta con conexión activa a Internet antes de disparar solicitudes innecesarias, ahorrando batería y datos móviles.
+   - **Justificación:** La requiere WorkManager, la biblioteca de Android Jetpack que usa el widget de escritorio. La app no la usa directamente.
+4. **`android.permission.VIBRATE`**:
+   - **Justificación:** Vibración breve (respuesta háptica) al detectar la tarjeta por NFC.
+5. **`android.permission.WAKE_LOCK`, `android.permission.RECEIVE_BOOT_COMPLETED` y `android.permission.FOREGROUND_SERVICE`**:
+   - **Justificación:** Las agrega automáticamente WorkManager para el trabajo en segundo plano del widget. La app no las usa directamente.
 
 ---
 
@@ -107,8 +117,9 @@ El código fuente completo de la aplicación es público y auditable por cualqui
 
 - **Local-First:** All card data, aliases, and balance logs are stored 100% on-device in a local SQLite database. The developer runs no external servers or cloud services of its own.
 - **Zero Trackers:** No analytics, advertising, or telemetry SDKs are included.
-- **Direct Queries:** HTTPS queries are made directly from your phone to `salta.miredbus.com.ar`. No device identifiers or personal info are transmitted. Anonymous balance queries may run a Cloudflare Turnstile challenge inside an offscreen in-app WebView on the official domain — no credentials involved.
-- **Optional RedBus Account:** You may optionally log in on the official RedBus site inside a hardened in-app WebView. Credentials go straight to the official page — the app never reads or stores your password. Portal session cookies stay in the app's private CookieManager, are sent only to `salta.miredbus.com.ar`, and are deleted when you disconnect. Without an account, anonymous captcha mode works exactly the same.
+- **Direct Queries:** HTTPS queries are made directly from your phone to `salta.miredbus.com.ar`. No device identifiers or personal info are transmitted. Anonymous balance queries may run a Cloudflare Turnstile challenge inside an offscreen in-app WebView on the official domain; Cloudflare processes technical connection data (such as the IP address) to tell humans from bots. No credentials are involved.
+- **Optional RedBus Account:** You may optionally log in on the official RedBus site inside a hardened in-app WebView. Credentials go straight to the official page — the app never reads or stores your password. Portal session cookies stay in the app's private CookieManager, are sent only to `salta.miredbus.com.ar`, and are deleted when you disconnect. Without an account, anonymous captcha mode works exactly the same. Account sync stores the linked cards' wallet balances, internal number and description on-device only; pending loads are fetched on demand.
+- **Wear OS (optional):** The favorite card's alias, balance, trip estimate and last-update time are sent to your own paired watch through the Google Play services Wearable Data Layer. The watch never contacts the portal.
 - **On-Device OCR:** Captchas are processed locally on your phone using Google ML Kit. No images are sent to the cloud.
 - **Data Deletion:** Deleting a card wipes all its associated history immediately. Disconnecting the account removes the portal session cookies; your local cards and history remain. Uninstalling the app permanently purges all local data.
 - **Open Source:** Full source code is available for audit at [github.com/JuannIM/saetaapp](https://github.com/JuannIM/saetaapp).

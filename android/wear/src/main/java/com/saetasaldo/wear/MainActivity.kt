@@ -98,6 +98,9 @@ class MainActivity : ComponentActivity(), DataClient.OnDataChangedListener {
             try {
                 val nodes = Wearable.getNodeClient(this@MainActivity)
                     .connectedNodes.await()
+                if (nodes.isEmpty()) {
+                    refreshing.value = false
+                }
                 nodes.forEach { node ->
                     Wearable.getMessageClient(this@MainActivity)
                         .sendMessage(node.id, PATH_REFRESH_REQUEST, byteArrayOf())

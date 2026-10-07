@@ -32,6 +32,9 @@ class CardRepositoryImpl(
     override suspend fun getCardById(id: String): SaetaCard? =
         cardDao.getCardById(id)?.toDomain()
 
+    override suspend fun getCardByNumber(cardNumber: String): SaetaCard? =
+        cardDao.getCardByNumber(cardNumber.trim())?.toDomain()
+
     override suspend fun getCardByNfcUid(uid: String): SaetaCard? =
         cardDao.getCardByNfcUid(uid)?.toDomain()
 

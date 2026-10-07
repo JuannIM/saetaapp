@@ -1,5 +1,6 @@
 package com.saetasaldo.app.wear
 
+import androidx.glance.appwidget.updateAll
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.WearableListenerService
 import com.saetasaldo.app.data.local.SaetaDatabase
@@ -7,11 +8,8 @@ import com.saetasaldo.app.data.ocr.MlKitCaptchaSolver
 import com.saetasaldo.app.data.remote.NetworkClient
 import com.saetasaldo.app.data.repository.CardRepositoryImpl
 import com.saetasaldo.app.domain.usecase.SolveCaptchaUseCase
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
+import com.saetasaldo.app.widget.SaetaBalanceWidget
+import kotlinx.coroutines.runBlocking
 
 /**
  * Handles "refresh" requests sent from the watch. Runs the same anonymous
@@ -20,11 +18,9 @@ import kotlinx.coroutines.launch
  */
 class PhoneWearListenerService : WearableListenerService() {
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
     override fun onMessageReceived(messageEvent: MessageEvent) {
         if (messageEvent.path != WearSyncManager.PATH_REFRESH_REQUEST) return
-        scope.launch {
+        runBlocking {
             val db = SaetaDatabase.getInstance(this@PhoneWearListenerService)
             MlKitCaptchaSolver().use { solver ->
                 val repo = CardRepositoryImpl(
@@ -38,11 +34,7 @@ class PhoneWearListenerService : WearableListenerService() {
                 WearSyncManager(this@PhoneWearListenerService)
                     .pushFavoriteCard(repo.getFavoriteCard())
             }
+            SaetaBalanceWidget().updateAll(this@PhoneWearListenerService)
         }
-    }
-
-    override fun onDestroy() {
-        scope.cancel()
-        super.onDestroy()
     }
 }
