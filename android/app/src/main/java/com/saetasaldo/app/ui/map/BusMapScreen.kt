@@ -21,17 +21,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -66,8 +66,6 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 import kotlin.math.roundToInt
 
-private val GROUP_LEVEL_LABELS = listOf("Grupo", "Corredor", "Subgrupo")
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BusMapScreen(
@@ -85,14 +83,19 @@ fun BusMapScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     // Approximate (coarse) location is requested only when the user taps the
-    // FAB; it is used once to center the map and never leaves the device.
+    // FAB: it draws a dot that follows the user while the map is open and
+    // centers once. The position never leaves the device.
+    fun enableLocationAndCenter() {
+        osmController?.enableMyLocation(context)
+        locateOnce(context) { lat, lng ->
+            osmController?.centerOn(lat, lng, LOCATION_ZOOM)
+        }
+    }
     val locationLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) {
-            locateOnce(context) { lat, lng ->
-                osmController?.centerOn(lat, lng, LOCATION_ZOOM)
-            }
+            enableLocationAndCenter()
         } else {
             scope.launch { snackbarHostState.showSnackbar("Sin permiso de ubicación") }
         }
@@ -149,9 +152,7 @@ fun BusMapScreen(
                         context, Manifest.permission.ACCESS_COARSE_LOCATION
                     ) == PackageManager.PERMISSION_GRANTED
                     if (granted) {
-                        locateOnce(context) { lat, lng ->
-                            osmController?.centerOn(lat, lng, LOCATION_ZOOM)
-                        }
+                        enableLocationAndCenter()
                     } else {
                         locationLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
                     }
@@ -169,11 +170,22 @@ fun BusMapScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            SelectorRow(
+            var linePickerOpen by remember { mutableStateOf(false) }
+            SelectionChipRow(
                 state = state,
-                onGroupSelect = viewModel::selectGroup,
-                onLineSelect = viewModel::selectLine
+                onOpenPicker = { linePickerOpen = true }
             )
+            if (linePickerOpen) {
+                LinePickerSheet(
+                    state = state,
+                    onDismiss = { linePickerOpen = false },
+                    onGroupSelect = viewModel::selectGroup,
+                    onLineSelect = { cod ->
+                        viewModel.selectLine(cod)
+                        linePickerOpen = false
+                    }
+                )
+            }
 
             state.error?.let { error ->
                 Surface(
@@ -362,94 +374,87 @@ private fun StopArrivalsSheet(
     }
 }
 
-/** One dropdown per tree level that still has subgroups, plus a line dropdown. */
+/**
+ * Compact selection strip: one chip per chosen level plus a trailing "Elegir
+ * línea" affordance. The full picker lives in a ModalBottomSheet — dialog
+ * windows always draw above the hardware-accelerated MapView, unlike dropdown
+ * popups which can be covered by it on some devices.
+ */
 @Composable
-private fun SelectorRow(
+private fun SelectionChipRow(
     state: BusMapUiState,
-    onGroupSelect: (Int, String) -> Unit,
-    onLineSelect: (String) -> Unit
+    onOpenPicker: () -> Unit
 ) {
     val tree = state.lineTree ?: return
-    val levels = mutableListOf<Pair<Int, LineGroup>>()
-    var node: LineGroup? = tree
-    var level = 0
-    while (node != null && node.subGroups.isNotEmpty()) {
-        levels.add(level to node)
-        val selected = state.selectionPath.getOrNull(level)
-        node = node.subGroups.firstOrNull { it.codGrupo == selected }
-        level++
-    }
-    val lineOptions = node?.lineas.orEmpty()
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
             .padding(horizontal = 12.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        levels.forEach { (lvl, group) ->
-            MapDropdown(
-                label = GROUP_LEVEL_LABELS.getOrElse(lvl) { "Subgrupo" },
-                options = group.subGroups.map { it.codGrupo },
-                selected = state.selectionPath.getOrNull(lvl),
-                onSelect = { onGroupSelect(lvl, it) },
-                modifier = Modifier.weight(1f)
+        state.selectionPath.forEach { cod ->
+            FilterChip(
+                selected = true,
+                onClick = onOpenPicker,
+                label = { Text(cod) }
             )
         }
-        if (lineOptions.isNotEmpty()) {
-            MapDropdown(
-                label = "Línea",
-                options = lineOptions.map { it.codLinea },
-                optionText = { cod -> lineOptions.first { it.codLinea == cod }.descripcion.ifEmpty { cod } },
-                selected = state.selectedLine?.codLinea,
-                onSelect = onLineSelect,
-                modifier = Modifier.weight(1f)
-            )
-        }
+        FilterChip(
+            selected = false,
+            onClick = onOpenPicker,
+            label = {
+                Text(state.selectedLine?.let { l -> l.descripcion.ifEmpty { l.codLinea } }
+                    ?: "Elegir línea")
+            }
+        )
     }
 }
 
+/**
+ * Drill-down picker inside a ModalBottomSheet: shows the groups at the current
+ * level, or the line list when the selected node has `lineas`. The sheet keeps
+ * its own navigation path so drilling does not mutate the live selection until
+ * a line is finally tapped.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MapDropdown(
-    label: String,
-    options: List<String>,
-    selected: String?,
-    onSelect: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    optionText: (String) -> String = { it }
+private fun LinePickerSheet(
+    state: BusMapUiState,
+    onDismiss: () -> Unit,
+    onGroupSelect: (Int, String) -> Unit,
+    onLineSelect: (String) -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it },
-        modifier = modifier
-    ) {
-        OutlinedTextField(
-            value = selected?.let(optionText) ?: "",
-            onValueChange = {},
-            readOnly = true,
-            placeholder = { Text(label) },
-            label = { Text(label) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            singleLine = true,
-            modifier = Modifier
-                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
-                .fillMaxWidth()
-        )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            options.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(optionText(option)) },
-                    onClick = {
-                        expanded = false
-                        onSelect(option)
+    var drillPath by remember { mutableStateOf(state.selectionPath) }
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        val node = state.lineTree?.resolvePath(drillPath)
+        Column(modifier = Modifier.fillMaxWidth()) {
+            if (drillPath.isNotEmpty()) {
+                ListItem(
+                    headlineContent = { Text("‹ ${drillPath.last()}") },
+                    modifier = Modifier.clickable { drillPath = drillPath.dropLast(1) }
+                )
+            } else {
+                ListItem(headlineContent = { Text("Elegí un grupo") })
+            }
+            node?.subGroups?.forEach { group ->
+                ListItem(
+                    headlineContent = { Text(group.codGrupo) },
+                    modifier = Modifier.clickable {
+                        val lvl = drillPath.size
+                        onGroupSelect(lvl, group.codGrupo)
+                        drillPath = drillPath + group.codGrupo
                     }
                 )
             }
+            node?.lineas?.forEach { line ->
+                ListItem(
+                    headlineContent = { Text(line.descripcion.ifEmpty { line.codLinea }) },
+                    modifier = Modifier.clickable { onLineSelect(line.codLinea) }
+                )
+            }
+            Spacer(modifier = Modifier.padding(vertical = 12.dp))
         }
     }
 }

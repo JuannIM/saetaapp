@@ -28,9 +28,12 @@ import org.osmdroid.util.MapTileIndex
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
+import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
+import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
 private const val STALE_BUS_SECONDS = 120L
 private const val DEFAULT_ZOOM = 13.0
+private const val MAX_ROUTE_POINTS = 2_000
 
 /**
  * Tile source driven by a URL template ({z}/{x}/{y}); after any tile download
@@ -68,6 +71,20 @@ class OsmMapController internal constructor(
     private val busMarkers = linkedMapOf<String, Marker>()
     private val busIcons = mutableMapOf<String, Drawable>()
     private var routeFitted = false
+    private var myLocationOverlay: MyLocationNewOverlay? = null
+
+    /**
+     * Shows the blue dot that tracks the user's position while this screen is
+     * open. Caller must hold a location permission before calling.
+     */
+    fun enableMyLocation(context: Context) {
+        if (myLocationOverlay != null) return
+        val overlay = MyLocationNewOverlay(GpsMyLocationProvider(context), mapView)
+        overlay.enableMyLocation()
+        mapView.overlayManager.add(overlay)
+        myLocationOverlay = overlay
+        mapView.invalidate()
+    }
 
     fun renderRoute(route: LineRoute?, onStopClick: (RouteNode) -> Unit) {
         routeLine?.let { mapView.overlayManager.remove(it) }
@@ -79,7 +96,7 @@ class OsmMapController internal constructor(
             mapView.invalidate()
             return
         }
-        val points = route.nodes.map { GeoPoint(it.latitud, it.longitud) }
+        val points = decimate(route.nodes.map { GeoPoint(it.latitud, it.longitud) })
         val density = mapView.resources.displayMetrics.density
         val line = Polyline(mapView).apply {
             outlinePaint.color = Color.RED
@@ -109,10 +126,10 @@ class OsmMapController internal constructor(
             mapView.post {
                 runCatching {
                     val box = BoundingBox(
-                        points.maxOf { it.latitude },
-                        points.maxOf { it.longitude },
-                        points.minOf { it.latitude },
-                        points.minOf { it.longitude }
+                        route.nodes.maxOf { it.latitud },
+                        route.nodes.maxOf { it.longitud },
+                        route.nodes.minOf { it.latitud },
+                        route.nodes.minOf { it.longitud }
                     )
                     mapView.zoomToBoundingBox(box, false, (density * 48).toInt())
                 }
@@ -163,6 +180,34 @@ class OsmMapController internal constructor(
         zoom?.let { mapView.controller.setZoom(it) }
         mapView.invalidate()
     }
+
+    fun pauseMyLocation() {
+        myLocationOverlay?.disableMyLocation()
+    }
+
+    fun resumeMyLocation() {
+        myLocationOverlay?.enableMyLocation()
+    }
+
+    /** Stops the location listener — called when the map is disposed. */
+    fun disableMyLocation() {
+        myLocationOverlay?.let {
+            it.disableMyLocation()
+            mapView.overlayManager.remove(it)
+        }
+        myLocationOverlay = null
+    }
+}
+
+/**
+ * Even stride decimation to cap drawn polyline points; keeps endpoints so the
+ * rendered shape is preserved while bounding long metropolitan routes.
+ */
+private fun decimate(points: List<GeoPoint>, max: Int = MAX_ROUTE_POINTS): List<GeoPoint> {
+    if (points.size <= max) return points
+    val stride = points.size.toDouble() / (max - 1)
+    return (0 until max).map { points[(it * stride).toInt().coerceAtMost(points.size - 1)] }
+        .distinct()
 }
 
 @Composable
@@ -206,8 +251,14 @@ fun OsmdroidMapView(
     DisposableEffect(lifecycleOwner, osm) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_RESUME -> osm.mapView.onResume()
-                Lifecycle.Event.ON_PAUSE -> osm.mapView.onPause()
+                Lifecycle.Event.ON_RESUME -> {
+                    osm.mapView.onResume()
+                    osm.resumeMyLocation()
+                }
+                Lifecycle.Event.ON_PAUSE -> {
+                    osm.pauseMyLocation()
+                    osm.mapView.onPause()
+                }
                 else -> Unit
             }
         }
@@ -217,6 +268,7 @@ fun OsmdroidMapView(
         }
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
+            osm.disableMyLocation()
             osm.mapView.onPause()
             osm.mapView.onDetach()
         }

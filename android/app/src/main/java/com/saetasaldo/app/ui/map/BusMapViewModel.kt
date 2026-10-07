@@ -10,8 +10,10 @@ import com.saetasaldo.app.domain.model.MapConfig
 import com.saetasaldo.app.domain.model.RouteNode
 import com.saetasaldo.app.domain.repository.BusMapRepository
 import com.saetasaldo.app.domain.usecase.EstimateArrivalsUseCase
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -183,10 +185,12 @@ class BusMapViewModel(
             val news = repository.lineNews(codLinea)
             if (_uiState.value.selectedLine?.codLinea != codLinea) return@launch
             val loaded = route.getOrNull()
-            interpolator.setRoute(
-                loaded?.takeIf { it.nodes.size >= 2 }?.let { RouteProjector(it) },
-                lastPositions
-            )
+            // Projector construction walks every node — off the main thread so
+            // long metropolitan routes can't freeze or kill the UI.
+            val projector = loaded?.takeIf { it.nodes.size >= 2 }
+                ?.let { withContext(Dispatchers.Default) { RouteProjector(it) } }
+            if (_uiState.value.selectedLine?.codLinea != codLinea) return@launch
+            interpolator.setRoute(projector, lastPositions)
             _uiState.value = _uiState.value.copy(
                 route = loaded,
                 news = news.getOrNull().orEmpty(),

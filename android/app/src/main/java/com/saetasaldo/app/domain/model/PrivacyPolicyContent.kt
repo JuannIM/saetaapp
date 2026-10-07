@@ -25,7 +25,7 @@ object PrivacyPolicyContent {
         ),
         PolicySection(
             title = "5. Permisos Requeridos",
-            content = "• NFC: Se utiliza únicamente para detectar y leer el identificador de tu tarjeta SAETA cuando la acercas al teléfono.\n• INTERNET: Para comunicarse con el portal oficial de RedBus (consulta de saldo, inicio de sesión opcional, desafío Turnstile y mapa de buses).\n• VIBRATE: Para una vibración breve al detectar tu tarjeta por NFC.\n• ACCESS_COARSE_LOCATION: Solo si pulsas el botón \"Mi ubicación\" del mapa de buses. Se lee una ubicación aproximada una única vez para centrar el mapa en tu posición; nunca se guarda, nunca se comparte y nunca sale del teléfono. La app nunca pide ubicación precisa ni en segundo plano.\n• ACCESS_NETWORK_STATE, WAKE_LOCK, RECEIVE_BOOT_COMPLETED y FOREGROUND_SERVICE: Las requiere WorkManager, la biblioteca de Android Jetpack que usa el widget para su trabajo en segundo plano; la app no las usa directamente."
+            content = "• NFC: Se utiliza únicamente para detectar y leer el identificador de tu tarjeta SAETA cuando la acercas al teléfono.\n• INTERNET: Para comunicarse con el portal oficial de RedBus (consulta de saldo, inicio de sesión opcional, desafío Turnstile y mapa de buses).\n• VIBRATE: Para una vibración breve al detectar tu tarjeta por NFC.\n• ACCESS_COARSE_LOCATION: Solo si pulsas el botón \"Mi ubicación\" del mapa de buses. Se usa tu ubicación aproximada para centrar el mapa y mostrar un punto que te sigue mientras la pantalla del mapa está abierta; deja de leerse al salir de la pantalla o cerrar la app, nunca se guarda, nunca se comparte y nunca sale del teléfono. La app nunca pide ubicación precisa ni en segundo plano.\n• ACCESS_NETWORK_STATE, WAKE_LOCK, RECEIVE_BOOT_COMPLETED y FOREGROUND_SERVICE: Las requiere WorkManager, la biblioteca de Android Jetpack que usa el widget para su trabajo en segundo plano; la app no las usa directamente."
         ),
         PolicySection(
             title = "6. Control y Eliminación de Datos",
@@ -41,7 +41,7 @@ object PrivacyPolicyContent {
         "NFC" to "Lectura del chip contactless de la tarjeta física SAETA para vincularla rápidamente.",
         "INTERNET" to "Comunicación cifrada HTTPS con el portal oficial para consultar el saldo.",
         "VIBRATE" to "Respuesta háptica breve al detectar la tarjeta por NFC.",
-        "ACCESS_COARSE_LOCATION" to "Ubicación aproximada leída una sola vez para centrar el mapa de buses al pulsar el botón; nunca se transmite ni se almacena.",
+        "ACCESS_COARSE_LOCATION" to "Ubicación aproximada para centrar el mapa de buses y mostrar un punto con tu posición mientras el mapa está abierto; nunca se transmite ni se almacena.",
         "ACCESS_NETWORK_STATE" to "Requerido por WorkManager (Android Jetpack), que usa el widget; la app no lo usa directamente."
     )
 }
