@@ -72,6 +72,9 @@ dependencies {
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)
 
+    // Map (OpenStreetMap tiles)
+    implementation(libs.osmdroid.android)
+
     // Wear OS data layer
     implementation(libs.play.services.wearable)
     implementation(libs.kotlinx.coroutines.play.services)

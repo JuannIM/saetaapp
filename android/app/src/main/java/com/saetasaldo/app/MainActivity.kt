@@ -41,6 +41,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.saetasaldo.app.data.local.FareStore
 import com.saetasaldo.app.data.nfc.AndroidNfcManager
 import com.saetasaldo.app.domain.model.RedBusSessionState
+import com.saetasaldo.app.domain.repository.BusMapRepository
 import com.saetasaldo.app.domain.repository.CardRepository
 import com.saetasaldo.app.domain.repository.RedBusAccountRepository
 import com.saetasaldo.app.domain.usecase.GetCardBalanceUseCase
@@ -52,6 +53,8 @@ import com.saetasaldo.app.ui.cards.CardsScreen
 import com.saetasaldo.app.ui.cards.CardsViewModel
 import com.saetasaldo.app.ui.detail.CardDetailScreen
 import com.saetasaldo.app.ui.detail.CardDetailViewModel
+import com.saetasaldo.app.ui.map.BusMapScreen
+import com.saetasaldo.app.ui.map.BusMapViewModel
 import com.saetasaldo.app.ui.nfc.NfcScanBottomSheet
 import com.saetasaldo.app.ui.theme.SaetaSaldoTheme
 import com.saetasaldo.app.wear.WearSyncManager
@@ -66,6 +69,7 @@ sealed interface Screen {
     data object CardsList : Screen
     data class CardDetail(val cardId: String, val refreshOnOpen: Boolean = false) : Screen
     data object RedBusLogin : Screen
+    data object BusMap : Screen
 }
 
 data class NewCardPromptState(
@@ -96,6 +100,7 @@ class MainActivity : ComponentActivity() {
                         redBusAccountViewModel = container.redBusAccountViewModel,
                         repository = container.repository,
                         accountRepository = container.accountRepository,
+                        busMapRepository = container.busMapRepository,
                         processNfcScanUseCase = container.processNfcScanUseCase,
                         getCardBalanceUseCase = container.getCardBalanceUseCase,
                         isNfcSupported = nfcManager.isNfcSupported,
@@ -156,6 +161,7 @@ fun SaetaAppContent(
     redBusAccountViewModel: RedBusAccountViewModel,
     repository: CardRepository,
     accountRepository: RedBusAccountRepository,
+    busMapRepository: BusMapRepository,
     processNfcScanUseCase: ProcessNfcScanUseCase,
     getCardBalanceUseCase: GetCardBalanceUseCase,
     isNfcSupported: Boolean,
@@ -219,6 +225,7 @@ fun SaetaAppContent(
                 },
                 isNfcSupported = isNfcSupported,
                 redBusAccountState = accountState,
+                onOpenMap = { currentScreen = Screen.BusMap },
                 onConnectRedBus = { currentScreen = Screen.RedBusLogin },
                 onSyncRedBus = { redBusAccountViewModel.sync() },
                 onDisconnectRedBus = { redBusAccountViewModel.disconnect() },
@@ -269,6 +276,27 @@ fun SaetaAppContent(
                     accountState.sessionState == RedBusSessionState.Checking,
                 onVerifySession = { redBusAccountViewModel.verifyLoginAndSync() },
                 onBack = { currentScreen = Screen.CardsList }
+            )
+        }
+
+        is Screen.BusMap -> {
+            BackHandler {
+                currentScreen = Screen.CardsList
+            }
+            // viewModel() keeps the selected line across rotation while the
+            // ViewModelStore scopes the poll loop to the activity lifecycle.
+            val busMapViewModel: BusMapViewModel = viewModel(
+                factory = viewModelFactory {
+                    initializer {
+                        BusMapViewModel(repository = busMapRepository)
+                    }
+                }
+            )
+            BusMapScreen(
+                viewModel = busMapViewModel,
+                onBackClick = {
+                    currentScreen = Screen.CardsList
+                }
             )
         }
     }

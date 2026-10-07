@@ -1,6 +1,7 @@
 package com.saetasaldo.app.data.remote
 
 import com.saetasaldo.app.BuildConfig
+import com.saetasaldo.app.data.remote.api.BusMapApiService
 import com.saetasaldo.app.data.remote.api.SaetaApiService
 import com.saetasaldo.app.data.remote.cookie.SessionCookieJar
 import okhttp3.OkHttpClient
@@ -37,12 +38,19 @@ object NetworkClient {
         builder.build()
     }
 
-    val apiService: SaetaApiService by lazy {
+    private val retrofit: Retrofit by lazy {
         Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-            .create(SaetaApiService::class.java)
+    }
+
+    val apiService: SaetaApiService by lazy {
+        retrofit.create(SaetaApiService::class.java)
+    }
+
+    val busMapApiService: BusMapApiService by lazy {
+        retrofit.create(BusMapApiService::class.java)
     }
 }

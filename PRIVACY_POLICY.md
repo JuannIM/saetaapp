@@ -30,6 +30,7 @@ La aplicación opera bajo el principio estricto de **Privacidad por Diseño (Pri
 | **Sesión RedBus (cookies)** | Portal oficial | CookieManager privado de la app | Solo a salta.miredbus.com.ar | Consultar tarjetas vinculadas sin captcha |
 | **Monederos, número interno, descripción y cargas pendientes** (cuenta RedBus opcional) | Portal oficial, a través de tu sesión | Localmente en el dispositivo (SQLite Room); las cargas pendientes, solo en memoria | **Nunca** | Mostrar el saldo de cada monedero y avisar cargas pendientes de acreditación |
 | **Resumen de la tarjeta favorita** (alias, saldo, viajes estimados, hora de actualización) | Calculado en el teléfono | Teléfono y reloj Wear OS vinculado | Solo a tu propio reloj, mediante Google Play Services (Wearable Data Layer) | Mostrar el saldo en el reloj |
+| **Ubicación aproximada (coarse)** | GPS/red del dispositivo, solo si el usuario pulsa el botón "Mi ubicación" del mapa | Solo en memoria volátil; se descarta al instante | **Nunca** | Centrar el mapa de buses en la posición del usuario |
 
 ---
 
@@ -50,6 +51,7 @@ La aplicación realiza conexiones de red salientes hacia los servidores oficiale
 - **Seguridad:** Todas las comunicaciones se realizan de forma obligatoria mediante **cifrado TLS 1.2 / TLS 1.3 (HTTPS)**. El tráfico en texto plano (`cleartext HTTP`) está expresamente deshabilitado a nivel del sistema operativo mediante [`network_security_config.xml`](android/app/src/main/res/xml/network_security_config.xml).
 - **Carga Útil (modo anónimo):** La solicitud únicamente envía los parámetros técnicos requeridos por el servicio de consulta: número de tarjeta y texto del captcha resuelto. **No se envían identificadores del dispositivo (Android ID, IMEI, IMSI, dirección MAC ni ID de Publicidad de Google)**.
 - **Desafío Turnstile (modo anónimo):** Para resolver la verificación automáticamente, la app puede ejecutar un desafío de Cloudflare Turnstile dentro de un WebView interno fuera de pantalla sobre el dominio oficial `salta.miredbus.com.ar` — el mismo desafío que el portal ejecuta en un navegador. El desafío lo provee Cloudflare (`challenges.cloudflare.com`), que procesa datos técnicos de la conexión y del navegador (como la dirección IP) para distinguir personas de bots, según su propia política de privacidad. No intervienen credenciales; si el desafío falla se recurre al captcha de imagen con OCR local.
+- **Mapa de buses en tiempo real:** La pantalla de mapa consulta al mismo portal oficial los recorridos, paradas y posiciones de buses en circulación, que el servicio de RedBus/SAETA publica de forma pública y anónima. El mapa usa los servidores de teselas (mapas) que el propio servicio anuncia en su configuración (`mapmoblrj.red-bus.com.ar` y `b.tile.openstreetmap.org`, ambos por HTTPS), que pueden registrar la dirección IP como cualquier descarga de mapas web. Ninguna consulta envía datos del usuario ni del dispositivo.
 
 ### 4.1 Conexión Opcional con Cuenta RedBus (Inicio de Sesión Web)
 
@@ -82,6 +84,9 @@ La aplicación solicita los siguientes permisos (algunos los agrega automáticam
    - **Justificación:** Vibración breve (respuesta háptica) al detectar la tarjeta por NFC.
 5. **`android.permission.WAKE_LOCK`, `android.permission.RECEIVE_BOOT_COMPLETED` y `android.permission.FOREGROUND_SERVICE`**:
    - **Justificación:** Las agrega automáticamente WorkManager para el trabajo en segundo plano del widget. La app no las usa directamente.
+6. **`android.permission.ACCESS_COARSE_LOCATION`**:
+   - **Justificación:** Se solicita en contexto únicamente cuando el usuario pulsa el botón "Mi ubicación" del mapa de buses, para centrar el mapa en su posición.
+   - **Uso:** Solo ubicación aproximada (nunca precisa ni en segundo plano): la última posición conocida y una única lectura puntual; no hay rastreo continuo. La ubicación jamás se almacena, se comparte ni se transmite — se usa solo en el dispositivo para mover la cámara del mapa. Si el permiso se niega, el mapa sigue funcionando con normalidad.
 
 ---
 
@@ -120,6 +125,7 @@ El código fuente completo de la aplicación es público y auditable por cualqui
 - **Direct Queries:** HTTPS queries are made directly from your phone to `salta.miredbus.com.ar`. No device identifiers or personal info are transmitted. Anonymous balance queries may run a Cloudflare Turnstile challenge inside an offscreen in-app WebView on the official domain; Cloudflare processes technical connection data (such as the IP address) to tell humans from bots. No credentials are involved.
 - **Optional RedBus Account:** You may optionally log in on the official RedBus site inside a hardened in-app WebView. Credentials go straight to the official page — the app never reads or stores your password. Portal session cookies stay in the app's private CookieManager, are sent only to `salta.miredbus.com.ar`, and are deleted when you disconnect. Without an account, anonymous captcha mode works exactly the same. Account sync stores the linked cards' wallet balances, internal number and description on-device only; pending loads are fetched on demand.
 - **Wear OS (optional):** The favorite card's alias, balance, trip estimate and last-update time are sent to your own paired watch through the Google Play services Wearable Data Layer. The watch never contacts the portal.
+- **Live bus map:** The map reads publicly available routes, stops and bus positions from the official portal anonymously. Approximate (coarse) location is requested in context only when you tap "Mi ubicación", is used once on-device to center the map, and is never stored, shared, or transmitted.
 - **On-Device OCR:** Captchas are processed locally on your phone using Google ML Kit. No images are sent to the cloud.
 - **Data Deletion:** Deleting a card wipes all its associated history immediately. Disconnecting the account removes the portal session cookies; your local cards and history remain. Uninstalling the app permanently purges all local data.
 - **Open Source:** Full source code is available for audit at [github.com/JuannIM/saetaapp](https://github.com/JuannIM/saetaapp).
