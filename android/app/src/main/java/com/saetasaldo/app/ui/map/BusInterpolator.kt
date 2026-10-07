@@ -232,11 +232,14 @@ class BusInterpolator(
 
     fun speedMpsOf(interno: String): Double = tracks[interno]?.speedMps ?: 0.0
 
-    /** Rolling median of the last ≤5 fix-to-fix speeds, for ETA. */
+    /**
+     * Rolling median of the last ≤5 non-zero fix-to-fix speeds, for ETA. Zero
+     * samples (bus stopped at a stop) are skipped so a stop-and-go bus still
+     * gets an estimate; null only when there is no recent movement at all.
+     */
     fun medianSpeedMpsOf(interno: String): Double? {
-        val history = tracks[interno]?.speedHistory?.takeIf { it.isNotEmpty() }
-            ?: return null
-        val sorted = history.sorted()
+        val sorted = tracks[interno]?.speedHistory?.filter { it > 0.0 }?.sorted()
+            ?.takeIf { it.isNotEmpty() } ?: return null
         val mid = sorted.size / 2
         return if (sorted.size % 2 == 1) {
             sorted[mid]
