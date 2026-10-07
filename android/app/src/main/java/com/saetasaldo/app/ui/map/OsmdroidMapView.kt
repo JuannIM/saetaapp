@@ -1,9 +1,14 @@
 package com.saetasaldo.app.ui.map
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.drawable.Drawable
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
+import android.os.Looper
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
@@ -28,7 +33,8 @@ import org.osmdroid.util.MapTileIndex
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
-import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
+import org.osmdroid.views.overlay.mylocation.IMyLocationConsumer
+import org.osmdroid.views.overlay.mylocation.IMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
 private const val STALE_BUS_SECONDS = 120L
@@ -79,7 +85,7 @@ class OsmMapController internal constructor(
      */
     fun enableMyLocation(context: Context) {
         if (myLocationOverlay != null) return
-        val overlay = MyLocationNewOverlay(GpsMyLocationProvider(context), mapView)
+        val overlay = MyLocationNewOverlay(CoarseLocationProvider(context), mapView)
         overlay.enableMyLocation()
         mapView.overlayManager.add(overlay)
         myLocationOverlay = overlay
@@ -197,6 +203,47 @@ class OsmMapController internal constructor(
         }
         myLocationOverlay = null
     }
+}
+
+/**
+ * Feeds the my-location dot with network + passive fixes only. The default
+ * GpsMyLocationProvider needs GPS_PROVIDER, which requires the precise
+ * (FINE) permission the app deliberately never requests — coarse is enough
+ * for orientation on a city map.
+ */
+private class CoarseLocationProvider(context: Context) : IMyLocationProvider, LocationListener {
+    private val manager = context.getSystemService(LocationManager::class.java)
+    private var consumer: IMyLocationConsumer? = null
+
+    @SuppressLint("MissingPermission") // caller holds ACCESS_COARSE_LOCATION
+    override fun startLocationProvider(myLocationConsumer: IMyLocationConsumer): Boolean {
+        consumer = myLocationConsumer
+        var started = false
+        for (provider in listOf(LocationManager.NETWORK_PROVIDER, LocationManager.PASSIVE_PROVIDER)) {
+            if (manager?.isProviderEnabled(provider) == true) {
+                runCatching {
+                    manager.requestLocationUpdates(provider, 5_000L, 5f, this, Looper.getMainLooper())
+                }.onSuccess { started = true }
+            }
+        }
+        getLastKnownLocation()?.let { myLocationConsumer.onLocationChanged(it, this) }
+        return started
+    }
+
+    override fun stopLocationProvider() {
+        consumer = null
+        runCatching { manager?.removeUpdates(this) }
+    }
+
+    @SuppressLint("MissingPermission") // caller holds ACCESS_COARSE_LOCATION
+    override fun getLastKnownLocation(): Location? =
+        runCatching { manager?.getLastKnownLocation(LocationManager.NETWORK_PROVIDER) }.getOrNull()
+
+    override fun onLocationChanged(location: Location) {
+        consumer?.onLocationChanged(location, this)
+    }
+
+    override fun destroy() = stopLocationProvider()
 }
 
 /**

@@ -296,12 +296,12 @@ private fun locateOnce(context: Context, onLocated: (Double, Double) -> Unit) {
             provider,
             CancellationSignal(),
             ContextCompat.getMainExecutor(context)
-        ) { onLocated(it.latitude, it.longitude) }
+        ) { loc -> loc?.let { onLocated(it.latitude, it.longitude) } }
     } else {
         @Suppress("DEPRECATION")
         manager.requestSingleUpdate(
             provider,
-            { onLocated(it.latitude, it.longitude) },
+            { loc -> loc?.let { onLocated(it.latitude, it.longitude) } },
             Looper.getMainLooper()
         )
     }
