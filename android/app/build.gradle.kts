@@ -13,8 +13,8 @@ android {
         applicationId = "com.saetasaldo.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.2.0"
+        versionCode = 4
+        versionName = "1.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -71,6 +71,9 @@ dependencies {
     // Glance Widget
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)
+
+    // Map (OpenStreetMap tiles)
+    implementation(libs.osmdroid.android)
 
     // Wear OS data layer
     implementation(libs.play.services.wearable)

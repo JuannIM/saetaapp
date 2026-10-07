@@ -8,8 +8,10 @@ import com.saetasaldo.app.data.remote.NetworkClient
 import com.saetasaldo.app.data.remote.RedBusAccountNetworkClient
 import com.saetasaldo.app.data.remote.cookie.AndroidWebCookieStore
 import com.saetasaldo.app.data.remote.cookie.WebViewCookieJar
+import com.saetasaldo.app.data.repository.BusMapRepositoryImpl
 import com.saetasaldo.app.data.repository.CardRepositoryImpl
 import com.saetasaldo.app.data.repository.RedBusAccountRepositoryImpl
+import com.saetasaldo.app.domain.repository.BusMapRepository
 import com.saetasaldo.app.domain.repository.CardRepository
 import com.saetasaldo.app.domain.repository.RedBusAccountRepository
 import com.saetasaldo.app.domain.repository.TurnstileTokenProvider
@@ -61,6 +63,9 @@ class AppContainer(context: Context) {
     private val accountApi = RedBusAccountNetworkClient.create(accountCookieJar)
     val accountRepository: RedBusAccountRepository =
         RedBusAccountRepositoryImpl(accountApi, accountCookieJar)
+
+    val busMapRepository: BusMapRepository =
+        BusMapRepositoryImpl(NetworkClient.busMapApiService)
 
     private val syncRedBusCardsUseCase = SyncRedBusCardsUseCase(repository)
     private val refreshAllBalancesUseCase =

@@ -12,7 +12,10 @@ import android.webkit.WebView
  */
 object RedBusWebViewSecurity {
 
-    const val LOGIN_URL = "https://salta.miredbus.com.ar/login"
+    // /login 302-redirects to plain http://index.html, which the https-only
+    // policy would (correctly) block — the SPA's login route is the same
+    // destination over TLS.
+    const val LOGIN_URL = "https://salta.miredbus.com.ar/index.html#/login"
 
     /** Only https + exact host salta.miredbus.com.ar, case-insensitive. */
     fun isAllowedMainFrame(uri: Uri): Boolean {

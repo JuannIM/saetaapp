@@ -13,7 +13,7 @@ object PrivacyPolicyContent {
         ),
         PolicySection(
             title = "2. Consultas a MiRedBus",
-            content = "La app ofrece dos formas de consultar tu saldo. En el modo anónimo, siempre disponible, se envía únicamente el número de tarjeta y el código de seguridad (captcha) al portal oficial de MiRedBus Salta mediante conexión cifrada HTTPS. Opcionalmente puedes conectar tu cuenta de RedBus: el inicio de sesión se realiza directamente en la página oficial de RedBus dentro de un WebView protegido, y SAETA Saldo nunca recibe, lee ni almacena tu contraseña. Las cookies de sesión del portal se guardan solo en el almacenamiento privado de la app y se usan exclusivamente para consultar tus tarjetas vinculadas sin captcha: se leen el número de tarjeta vinculada, el saldo principal y el de los demás monederos que informe el portal, el tipo y el estado de la tarjeta, su número interno y la descripción que tiene en tu cuenta, y se consultan sus cargas pendientes de acreditación. Esos datos se guardan solo en tu dispositivo. No se recopilan identificadores de dispositivo ni ubicación, y nada se envía al desarrollador."
+            content = "La app ofrece dos formas de consultar tu saldo. En el modo anónimo, siempre disponible, se envía únicamente el número de tarjeta y el código de seguridad (captcha) al portal oficial de MiRedBus Salta mediante conexión cifrada HTTPS. Opcionalmente puedes conectar tu cuenta de RedBus: el inicio de sesión se realiza directamente en la página oficial de RedBus dentro de un WebView protegido, y SAETA Saldo nunca recibe, lee ni almacena tu contraseña. Las cookies de sesión del portal se guardan solo en el almacenamiento privado de la app y se usan exclusivamente para consultar tus tarjetas vinculadas sin captcha: se leen el número de tarjeta vinculada, el saldo principal y el de los demás monederos que informe el portal, el tipo y el estado de la tarjeta, su número interno y la descripción que tiene en tu cuenta, y se consultan sus cargas pendientes de acreditación. Esos datos se guardan solo en tu dispositivo. El mapa de buses en tiempo real consulta los recorridos, paradas y posiciones que el portal de RedBus/SAETA publica de forma anónima. No se recopilan identificadores de dispositivo, y nada se envía al desarrollador."
         ),
         PolicySection(
             title = "3. Reconocimiento de Captcha en el Dispositivo",
@@ -25,7 +25,7 @@ object PrivacyPolicyContent {
         ),
         PolicySection(
             title = "5. Permisos Requeridos",
-            content = "• NFC: Se utiliza únicamente para detectar y leer el identificador de tu tarjeta SAETA cuando la acercas al teléfono.\n• INTERNET: Para comunicarse con el portal oficial de RedBus (consulta de saldo, inicio de sesión opcional y desafío Turnstile).\n• VIBRATE: Para una vibración breve al detectar tu tarjeta por NFC.\n• ACCESS_NETWORK_STATE, WAKE_LOCK, RECEIVE_BOOT_COMPLETED y FOREGROUND_SERVICE: Las requiere WorkManager, la biblioteca de Android Jetpack que usa el widget para su trabajo en segundo plano; la app no las usa directamente."
+            content = "• NFC: Se utiliza únicamente para detectar y leer el identificador de tu tarjeta SAETA cuando la acercas al teléfono.\n• INTERNET: Para comunicarse con el portal oficial de RedBus (consulta de saldo, inicio de sesión opcional, desafío Turnstile y mapa de buses).\n• VIBRATE: Para una vibración breve al detectar tu tarjeta por NFC.\n• ACCESS_COARSE_LOCATION: Solo si pulsas el botón \"Mi ubicación\" del mapa de buses. Se usa tu ubicación aproximada para centrar el mapa y mostrar un punto que te sigue mientras la pantalla del mapa está abierta; deja de leerse al salir de la pantalla o cerrar la app, nunca se guarda, nunca se comparte y nunca sale del teléfono. La app nunca pide ubicación precisa ni en segundo plano.\n• ACCESS_NETWORK_STATE, WAKE_LOCK, RECEIVE_BOOT_COMPLETED y FOREGROUND_SERVICE: Las requiere WorkManager, la biblioteca de Android Jetpack que usa el widget para su trabajo en segundo plano; la app no las usa directamente."
         ),
         PolicySection(
             title = "6. Control y Eliminación de Datos",
@@ -41,6 +41,7 @@ object PrivacyPolicyContent {
         "NFC" to "Lectura del chip contactless de la tarjeta física SAETA para vincularla rápidamente.",
         "INTERNET" to "Comunicación cifrada HTTPS con el portal oficial para consultar el saldo.",
         "VIBRATE" to "Respuesta háptica breve al detectar la tarjeta por NFC.",
+        "ACCESS_COARSE_LOCATION" to "Ubicación aproximada para centrar el mapa de buses y mostrar un punto con tu posición mientras el mapa está abierto; nunca se transmite ni se almacena.",
         "ACCESS_NETWORK_STATE" to "Requerido por WorkManager (Android Jetpack), que usa el widget; la app no lo usa directamente."
     )
 }

@@ -14,6 +14,7 @@ junit = "4.13.2"
 mockk = "1.13.12"
 robolectric = "4.13"
 coroutines = "1.9.0"
+osmdroid = "6.1.20"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -44,6 +45,9 @@ mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition"
 # Glance Widget
 androidx-glance-appwidget = { group = "androidx.glance", name = "glance-appwidget", version.ref = "glance" }
 androidx-glance-material3 = { group = "androidx.glance", name = "glance-material3", version.ref = "glance" }
+
+# Map
+osmdroid-android = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "osmdroid" }
 
 # Wear OS
 play-services-wearable = { group = "com.google.android.gms", name = "play-services-wearable", version = "19.0.0" }

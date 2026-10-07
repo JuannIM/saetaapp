@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Nfc
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Shield
@@ -66,6 +67,7 @@ fun CardsScreen(
     onScanNfcClick: () -> Unit,
     isNfcSupported: Boolean = true,
     redBusAccountState: RedBusAccountUiState? = null,
+    onOpenMap: () -> Unit = {},
     onConnectRedBus: () -> Unit = {},
     onSyncRedBus: () -> Unit = {},
     onDisconnectRedBus: () -> Unit = {},
@@ -98,6 +100,12 @@ fun CardsScreen(
                     )
                 },
                 actions = {
+                    IconButton(onClick = onOpenMap) {
+                        Icon(
+                            imageVector = Icons.Default.Map,
+                            contentDescription = "Mapa de buses en tiempo real"
+                        )
+                    }
                     if (redBusAccountState != null) {
                         val isConnected =
                             redBusAccountState.sessionState == RedBusSessionState.Connected
