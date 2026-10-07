@@ -25,6 +25,7 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.saetasaldo.app.MainActivity
+import com.saetasaldo.app.data.local.FareStore
 import com.saetasaldo.app.data.local.SaetaDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -81,7 +82,7 @@ class SaetaBalanceWidget : GlanceAppWidget() {
                         modifier = GlanceModifier.padding(vertical = 4.dp)
                     )
 
-                    card?.toDomain()?.tripsSubtitle()?.let { trips ->
+                    card?.toDomain()?.tripsSubtitle(FareStore(context).get())?.let { trips ->
                         Text(
                             text = trips,
                             style = TextStyle(

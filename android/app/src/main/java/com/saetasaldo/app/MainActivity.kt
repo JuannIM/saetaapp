@@ -34,27 +34,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.lifecycleScope
-import com.saetasaldo.app.data.local.SaetaDatabase
+import androidx.glance.appwidget.updateAll
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.saetasaldo.app.data.local.FareStore
 import com.saetasaldo.app.data.nfc.AndroidNfcManager
-import com.saetasaldo.app.data.ocr.MlKitCaptchaSolver
-import com.saetasaldo.app.data.remote.NetworkClient
-import com.saetasaldo.app.data.remote.RedBusAccountNetworkClient
-import com.saetasaldo.app.data.remote.cookie.AndroidWebCookieStore
-import com.saetasaldo.app.data.remote.cookie.WebViewCookieJar
-import com.saetasaldo.app.data.repository.CardRepositoryImpl
-import com.saetasaldo.app.data.repository.RedBusAccountRepositoryImpl
 import com.saetasaldo.app.domain.model.RedBusSessionState
-import com.saetasaldo.app.domain.model.SaetaCard
 import com.saetasaldo.app.domain.repository.CardRepository
 import com.saetasaldo.app.domain.repository.RedBusAccountRepository
-import com.saetasaldo.app.domain.repository.TurnstileTokenProvider
 import com.saetasaldo.app.domain.usecase.GetCardBalanceUseCase
 import com.saetasaldo.app.domain.usecase.NfcScanResult
 import com.saetasaldo.app.domain.usecase.ProcessNfcScanUseCase
-import com.saetasaldo.app.domain.usecase.RefreshAllBalancesUseCase
-import com.saetasaldo.app.domain.usecase.SolveCaptchaUseCase
-import com.saetasaldo.app.domain.usecase.SyncRedBusCardsUseCase
 import com.saetasaldo.app.ui.account.RedBusAccountViewModel
 import com.saetasaldo.app.ui.account.RedBusLoginScreen
 import com.saetasaldo.app.ui.cards.CardsScreen
@@ -63,14 +54,17 @@ import com.saetasaldo.app.ui.detail.CardDetailScreen
 import com.saetasaldo.app.ui.detail.CardDetailViewModel
 import com.saetasaldo.app.ui.nfc.NfcScanBottomSheet
 import com.saetasaldo.app.ui.theme.SaetaSaldoTheme
-import com.saetasaldo.app.ui.turnstile.WebViewTurnstileTokenProvider
 import com.saetasaldo.app.wear.WearSyncManager
+import com.saetasaldo.app.widget.SaetaBalanceWidget
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 sealed interface Screen {
     data object CardsList : Screen
-    data class CardDetail(val cardId: String) : Screen
+    data class CardDetail(val cardId: String, val refreshOnOpen: Boolean = false) : Screen
     data object RedBusLogin : Screen
 }
 
@@ -82,61 +76,28 @@ data class NewCardPromptState(
 class MainActivity : ComponentActivity() {
 
     private lateinit var nfcManager: AndroidNfcManager
-    private lateinit var repository: CardRepository
-    private lateinit var processNfcScanUseCase: ProcessNfcScanUseCase
-    private lateinit var getCardBalanceUseCase: GetCardBalanceUseCase
-    private lateinit var cardsViewModel: CardsViewModel
-    private lateinit var redBusAccountViewModel: RedBusAccountViewModel
+
+    // App-scoped graph owned by SaetaApp; survives activity recreation and is
+    // torn down with the process, so nothing here is closed in onDestroy.
+    private val container: AppContainer by lazy { (application as SaetaApp).container }
 
     private val scannedTagFlow = MutableSharedFlow<String>(replay = 1, extraBufferCapacity = 1)
-    private var captchaSolver: MlKitCaptchaSolver? = null
-
-    // Offscreen WebView that resolves the anonymous Turnstile captcha. Only the
-    // app-facing repository gets it: the widget builds its own provider-less
-    // repository so it never touches a WebView in a cold process.
-    private val turnstileProvider: TurnstileTokenProvider by lazy {
-        WebViewTurnstileTokenProvider(applicationContext, NetworkClient.apiService)
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         nfcManager = AndroidNfcManager(this)
 
-        val db = SaetaDatabase.getInstance(this)
-        val solver = MlKitCaptchaSolver().also { captchaSolver = it }
-        val solveCaptchaUseCase = SolveCaptchaUseCase(NetworkClient.apiService, solver)
-        repository = CardRepositoryImpl(
-            db.cardDao(),
-            db.balanceHistoryDao(),
-            NetworkClient.apiService,
-            solveCaptchaUseCase,
-            turnstileProvider
-        )
-
-        processNfcScanUseCase = ProcessNfcScanUseCase(repository)
-
-        val webCookieStore = AndroidWebCookieStore()
-        val accountCookieJar = WebViewCookieJar(RedBusAccountNetworkClient.HOST, webCookieStore)
-        val accountApiService = RedBusAccountNetworkClient.create(accountCookieJar)
-        val accountRepository = RedBusAccountRepositoryImpl(accountApiService, accountCookieJar)
-        val syncRedBusCardsUseCase = SyncRedBusCardsUseCase(repository)
-        val refreshAllBalancesUseCase = RefreshAllBalancesUseCase(repository, accountRepository, syncRedBusCardsUseCase)
-        redBusAccountViewModel = RedBusAccountViewModel(accountRepository, syncRedBusCardsUseCase)
-
-        getCardBalanceUseCase = GetCardBalanceUseCase(repository, accountRepository)
-        cardsViewModel = CardsViewModel(repository, getCardBalanceUseCase, refreshAllBalancesUseCase)
-
         setContent {
             SaetaSaldoTheme {
                 Surface(color = MaterialTheme.colorScheme.background) {
                     SaetaAppContent(
-                        cardsViewModel = cardsViewModel,
-                        redBusAccountViewModel = redBusAccountViewModel,
-                        repository = repository,
-                        accountRepository = accountRepository,
-                        processNfcScanUseCase = processNfcScanUseCase,
-                        getCardBalanceUseCase = getCardBalanceUseCase,
+                        cardsViewModel = container.cardsViewModel,
+                        redBusAccountViewModel = container.redBusAccountViewModel,
+                        repository = container.repository,
+                        accountRepository = container.accountRepository,
+                        processNfcScanUseCase = container.processNfcScanUseCase,
+                        getCardBalanceUseCase = container.getCardBalanceUseCase,
                         isNfcSupported = nfcManager.isNfcSupported,
                         isNfcEnabled = nfcManager.isNfcEnabled,
                         scannedTagFlow = scannedTagFlow,
@@ -157,11 +118,6 @@ class MainActivity : ComponentActivity() {
     override fun onPause() {
         super.onPause()
         nfcManager.disableForegroundDispatch(this)
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        captchaSolver?.close()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -193,7 +149,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalCoroutinesApi::class)
 @Composable
 fun SaetaAppContent(
     cardsViewModel: CardsViewModel,
@@ -223,9 +179,13 @@ fun SaetaAppContent(
     val context = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(Unit) {
         val sync = WearSyncManager(context)
-        repository.getAllCards().collect { cards ->
-            sync.pushFavoriteCard(cards.firstOrNull { it.isFavorite })
-        }
+        repository.getAllCards()
+            .map { cards -> cards.firstOrNull { it.isFavorite } }
+            .distinctUntilChanged()
+            .collect { favorite ->
+                sync.pushFavoriteCard(favorite)
+                SaetaBalanceWidget().updateAll(context)
+            }
     }
 
     // Handle NFC tag scanned events
@@ -235,8 +195,7 @@ fun SaetaAppContent(
             showNfcBottomSheet = false
             when (val result = processNfcScanUseCase(uid)) {
                 is com.saetasaldo.app.domain.usecase.NfcScanResult.ExistingCardFound -> {
-                    getCardBalanceUseCase(result.card.cardNumber)
-                    currentScreen = Screen.CardDetail(result.card.id)
+                    currentScreen = Screen.CardDetail(result.card.id, refreshOnOpen = true)
                 }
                 is com.saetasaldo.app.domain.usecase.NfcScanResult.NewCardDiscovered -> {
                     newCardPrompt = NewCardPromptState(nfcUid = result.nfcUid)
@@ -271,16 +230,26 @@ fun SaetaAppContent(
             BackHandler {
                 currentScreen = Screen.CardsList
             }
-            val detailViewModel = remember(screen.cardId) {
-                CardDetailViewModel(
-                    cardId = screen.cardId,
-                    repository = repository,
-                    getCardBalanceUseCase = getCardBalanceUseCase,
-                    accountRepository = accountRepository
-                )
-            }
+            // viewModel(key) scopes the instance to the activity's
+            // ViewModelStore so it is cleared with the store instead of
+            // leaking through remember{} across navigation.
+            val detailViewModel: CardDetailViewModel = viewModel(
+                key = screen.cardId,
+                factory = viewModelFactory {
+                    initializer {
+                        CardDetailViewModel(
+                            cardId = screen.cardId,
+                            repository = repository,
+                            getCardBalanceUseCase = getCardBalanceUseCase,
+                            accountRepository = accountRepository,
+                            fareStore = FareStore(context.applicationContext)
+                        )
+                    }
+                }
+            )
             CardDetailScreen(
                 viewModel = detailViewModel,
+                refreshOnOpen = screen.refreshOnOpen,
                 onBackClick = {
                     currentScreen = Screen.CardsList
                 }
@@ -327,7 +296,7 @@ fun SaetaAppContent(
                 ) { result ->
                     val saved = result.getOrNull()
                     if (saved != null) {
-                        currentScreen = Screen.CardDetail(saved.id)
+                        currentScreen = Screen.CardDetail(saved.id, refreshOnOpen = true)
                     }
                 }
                 newCardPrompt = null

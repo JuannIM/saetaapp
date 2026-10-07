@@ -13,11 +13,13 @@ SAETA Saldo is an open-source, local-first utility for querying public bus card 
 - **Data Collected for App Functionality:** None stored on external developer servers.
 - **Data Shared with Third Parties:** None shared with advertising, analytics, or unrelated parties. The app sends direct HTTPS requests to the public transit provider `salta.miredbus.com.ar` to fetch balance, identical to a browser query.
 - **Optional Account Connection:** Users may optionally log in on the official RedBus site inside a hardened in-app WebView. Credentials are entered directly into the provider's page and are never received, read, or stored by the app or the developer. Portal session cookies are processed on-device, held only in the app-private `CookieManager`, and sent only to `salta.miredbus.com.ar`; they are deleted when the user disconnects. Anonymous captcha mode remains fully available without an account.
+- **Wear OS Companion:** The phone sends the favorite card's alias, formatted balance, trip estimate and last-update time to the user's own paired watch via the Google Play services Wearable Data Layer. This is a user-initiated transfer between the user's own devices; nothing reaches developer servers.
+- **Cloudflare Turnstile:** Anonymous queries may load the portal's Cloudflare Turnstile challenge in an offscreen WebView. As on any website that uses it, Cloudflare processes technical connection data (e.g., IP address, browser signals) for bot detection; the app itself does not collect it.
 - **Data Tracking / Advertising:** Zero advertising, analytics, or behavioral tracking SDKs.
 - **Data Encryption in Transit:** 100% of network traffic uses TLS 1.2+ HTTPS. Cleartext HTTP is disabled.
 - **User Data Deletion:** Supported locally inside the app. Deleting a card wipes all associated history; "Desconectar" removes the portal session cookies.
 
-> **Action required when this feature ships:** the Data Safety questionnaire must be re-submitted in Play Console. The answers below were updated for the optional RedBus account flow on 2026-10-05.
+> **Action required when this feature ships:** the Data Safety questionnaire must be re-submitted in Play Console. The answers below were updated for the optional RedBus account flow on 2026-10-05 and for account wallets, pending loads and the Wear OS companion on 2026-10-07.
 
 ---
 
@@ -63,7 +65,7 @@ SAETA Saldo is an open-source, local-first utility for querying public bus card 
 - **Credit score:** No
 - **Other financial info (Transit card balance / number):**
   - *If declared in Play Console:*
-    - **Collected?** Only locally processed and ephemerally transmitted to the transit query endpoint. With the optional account connection, the linked card number, `Principal (Dinero)` balance, card type, and card state are additionally read through the authenticated provider session and stored only in the on-device database.
+    - **Collected?** Only locally processed and ephemerally transmitted to the transit query endpoint. With the optional account connection, the linked card number, the `Principal (Dinero)` balance and any other wallet balances, card type, card state, internal card number (`nroInterno`) and the account's card description are additionally read through the authenticated provider session and stored only in the on-device database; pending loads (`cargaspendientes`) are fetched on demand and kept in memory only.
     - **Shared?** No.
     - **Ephemeral processing?** Yes for the anonymous query (executed in real-time, not logged to developer servers). Account-synced values are retained only in the local database under the user's control.
     - **Required or optional?** Required for the core feature (checking card balance); the account connection itself is optional.

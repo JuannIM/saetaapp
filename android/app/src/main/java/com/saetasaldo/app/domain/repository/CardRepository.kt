@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.Flow
 interface CardRepository {
     fun getAllCards(): Flow<List<SaetaCard>>
     suspend fun getCardById(id: String): SaetaCard?
+    suspend fun getCardByNumber(cardNumber: String): SaetaCard?
     suspend fun getCardByNfcUid(uid: String): SaetaCard?
     suspend fun getFavoriteCard(): SaetaCard?
     suspend fun saveCard(card: SaetaCard)

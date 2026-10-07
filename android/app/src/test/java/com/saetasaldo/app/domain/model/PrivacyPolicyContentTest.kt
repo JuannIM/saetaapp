@@ -78,6 +78,26 @@ class PrivacyPolicyContentTest {
         assertFalse(text.contains("100 % local", ignoreCase = true))
     }
 
+    @Test
+    fun `policy discloses account wallets, internal number and pending loads`() {
+        val text = allPolicyText()
+        assertTrue(text.contains("monederos", ignoreCase = true))
+        assertTrue(text.contains("número interno", ignoreCase = true))
+        assertTrue(text.contains("cargas pendientes", ignoreCase = true))
+    }
+
+    @Test
+    fun `policy discloses the Wear OS sync of the favorite card`() {
+        val text = allPolicyText()
+        assertTrue(text.contains("Wear OS"))
+        assertTrue(text.contains("Google Play Services"))
+    }
+
+    @Test
+    fun `permission explanations cover VIBRATE`() {
+        assertFalse(PrivacyPolicyContent.permissionsJustification.getValue("VIBRATE").isBlank())
+    }
+
     private fun allPolicyText(): String =
         PrivacyPolicyContent.sections.joinToString("\n") { "${it.title}\n${it.content}" }
 }

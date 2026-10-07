@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.saetasaldo.app.domain.model.SaetaCard
 import com.saetasaldo.app.domain.repository.CardRepository
-import com.saetasaldo.app.domain.usecase.GetCardBalanceUseCase
 import com.saetasaldo.app.domain.usecase.RefreshAllBalancesUseCase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,8 +16,7 @@ import java.util.UUID
 
 class CardsViewModel(
     private val repository: CardRepository,
-    private val getCardBalanceUseCase: GetCardBalanceUseCase,
-    private val refreshAllBalancesUseCase: RefreshAllBalancesUseCase? = null
+    private val refreshAllBalancesUseCase: RefreshAllBalancesUseCase
 ) : ViewModel() {
 
     val cards: StateFlow<List<SaetaCard>> = repository.getAllCards()
@@ -35,46 +33,14 @@ class CardsViewModel(
             _isRefreshing.value = true
             _errorMessage.value = null
             try {
-                val coordinator = refreshAllBalancesUseCase
-                if (coordinator != null) {
-                    val result = coordinator(cards.value)
-                    if (result.failures.isNotEmpty()) {
-                        _errorMessage.value = result.failures.values.first().message
-                    }
-                } else {
-                    // Legacy path until the coordinator is wired in (Task 11).
-                    val currentCards = cards.value
-                    for ((index, card) in currentCards.withIndex()) {
-                        if (index > 0) {
-                            kotlinx.coroutines.delay(800) // Polite pacing to prevent bot-flagging
-                        }
-                        val result = getCardBalanceUseCase(card.cardNumber)
-                        if (result.isFailure) {
-                            _errorMessage.value = result.exceptionOrNull()?.localizedMessage
-                        }
-                    }
+                val result = refreshAllBalancesUseCase(cards.value)
+                if (result.failures.isNotEmpty()) {
+                    _errorMessage.value = result.failures.values.first().message
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 _errorMessage.value = e.localizedMessage ?: "Error al actualizar saldos"
-            } finally {
-                _isRefreshing.value = false
-            }
-        }
-    }
-
-    fun refreshCard(cardNumber: String) {
-        viewModelScope.launch {
-            _isRefreshing.value = true
-            _errorMessage.value = null
-            try {
-                val result = getCardBalanceUseCase(cardNumber)
-                if (result.isFailure) {
-                    _errorMessage.value = result.exceptionOrNull()?.localizedMessage
-                }
-            } catch (e: Exception) {
-                _errorMessage.value = e.localizedMessage ?: "Error al actualizar saldo"
             } finally {
                 _isRefreshing.value = false
             }
@@ -90,24 +56,27 @@ class CardsViewModel(
         viewModelScope.launch {
             _errorMessage.value = null
             try {
-                val isFirstCard = cards.value.isEmpty()
-                val newCard = SaetaCard(
-                    id = UUID.randomUUID().toString(),
-                    name = name.ifBlank { "Tarjeta SAETA" },
-                    cardNumber = cardNumber.trim(),
-                    nfcUid = nfcUid?.trim()?.uppercase(),
-                    isFavorite = isFirstCard
-                )
-                repository.saveCard(newCard)
-
-                // Refresh balance immediately
-                val balanceResult = getCardBalanceUseCase(newCard.cardNumber)
-                if (balanceResult.isSuccess) {
-                    onComplete?.invoke(balanceResult)
+                val number = cardNumber.trim()
+                val uid = nfcUid?.trim()?.uppercase()
+                val existing = repository.getCardByNumber(number)
+                val card = if (existing != null) {
+                    existing.copy(
+                        name = name.trim().ifBlank { existing.name },
+                        nfcUid = uid ?: existing.nfcUid
+                    )
                 } else {
-                    onComplete?.invoke(Result.success(newCard))
-                    _errorMessage.value = balanceResult.exceptionOrNull()?.localizedMessage
+                    SaetaCard(
+                        id = UUID.randomUUID().toString(),
+                        name = name.trim().ifBlank { "Tarjeta SAETA" },
+                        cardNumber = number,
+                        nfcUid = uid,
+                        isFavorite = cards.value.isEmpty()
+                    )
                 }
+                repository.saveCard(card)
+                onComplete?.invoke(Result.success(card))
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 val errorMsg = e.localizedMessage ?: "Error al guardar tarjeta"
                 _errorMessage.value = errorMsg

@@ -157,6 +157,15 @@ y el flujo captcha/OCR. Si el token falla, es rechazado (`error: 1`) o la red
 falla, la consulta degrada al captcha de imagen con OCR y luego al ingreso
 manual.
 
+**Correccion (2026-10-07):** el WebView de Turnstile comparte el `CookieManager`
+global con el WebView de login. Si el usuario conecto su cuenta, la home se carga
+con las cookies de sesion del portal, asi que la pagina no es estrictamente
+anonima. El riesgo se acepta porque el puente solo expone `onToken`/`onError`
+(no devuelve datos a la pagina ni lee la sesion) y el main frame sigue
+restringido al host exacto por HTTPS. Alternativa evaluada: reemplazar
+`addJavascriptInterface` por `WebViewCompat.addWebMessageListener` con allowlist
+de origen `https://salta.miredbus.com.ar` (requiere `androidx.webkit`).
+
 ## Referencias
 
 - `docs/superpowers/specs/2026-10-05-redbus-optional-account-design.md`

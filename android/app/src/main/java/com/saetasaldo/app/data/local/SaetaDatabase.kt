@@ -36,7 +36,7 @@ abstract class SaetaDatabase : RoomDatabase() {
 
         fun getInstance(context: Context): SaetaDatabase {
             return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
+                val instance = INSTANCE ?: Room.databaseBuilder(
                     context.applicationContext,
                     SaetaDatabase::class.java,
                     "saeta_saldo.db"
