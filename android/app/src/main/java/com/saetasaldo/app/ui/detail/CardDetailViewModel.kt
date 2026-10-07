@@ -23,8 +23,10 @@ import kotlinx.coroutines.launch
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import com.saetasaldo.app.data.local.FareStore
 import com.saetasaldo.app.data.remote.NetworkClient
 import com.saetasaldo.app.data.remote.api.SaetaApiService
+import com.saetasaldo.app.domain.model.CardWallet
 
 class CardDetailViewModel(
     val cardId: String,
@@ -32,7 +34,8 @@ class CardDetailViewModel(
     private val getCardBalanceUseCase: GetCardBalanceUseCase,
     private val calculateRemainingTripsUseCase: CalculateRemainingTripsUseCase = CalculateRemainingTripsUseCase(),
     private val apiService: SaetaApiService? = null,
-    private val accountRepository: RedBusAccountRepository? = null
+    private val accountRepository: RedBusAccountRepository? = null,
+    private val fareStore: FareStore? = null
 ) : ViewModel() {
 
     private val _pendingLoads = MutableStateFlow<List<PendingLoad>?>(null)
@@ -65,7 +68,7 @@ class CardDetailViewModel(
     val history: StateFlow<List<BalanceRecord>> = repository.getHistoryForCard(cardId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _fare = MutableStateFlow(1450.0)
+    private val _fare = MutableStateFlow(fareStore?.get() ?: CardWallet.DEFAULT_FARE)
     val fare: StateFlow<Double> = _fare.asStateFlow()
 
     val tripEstimate: StateFlow<TripEstimate?> = combine(card, fare) { currentCard, currentFare ->
@@ -89,6 +92,7 @@ class CardDetailViewModel(
     fun updateFare(newFare: Double) {
         if (newFare > 0.0) {
             _fare.value = newFare
+            fareStore?.set(newFare)
         }
     }
 

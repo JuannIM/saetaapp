@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.google.android.gms.wearable.PutDataMapRequest
 import com.google.android.gms.wearable.Wearable
+import com.saetasaldo.app.data.local.FareStore
 import com.saetasaldo.app.domain.model.SaetaCard
 import kotlinx.coroutines.tasks.await
 
@@ -31,7 +32,7 @@ class WearSyncManager(private val context: Context) {
                 if (card != null) {
                     dataMap.putString(KEY_NAME, card.name)
                     dataMap.putString(KEY_BALANCE, card.formattedBalance())
-                    card.tripsSubtitle()?.let { dataMap.putString(KEY_TRIPS, it) }
+                    card.tripsSubtitle(FareStore(context).get())?.let { dataMap.putString(KEY_TRIPS, it) }
                     dataMap.putLong(KEY_UPDATED, card.lastUpdated ?: 0L)
                 }
                 // Timestamp forces delivery even when the payload is unchanged.

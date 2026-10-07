@@ -25,7 +25,7 @@ La aplicación opera bajo el principio estricto de **Privacidad por Diseño (Pri
 | **Número de Tarjeta SAETA** | Ingresado manualmente, leído por NFC o sincronizado desde tu cuenta RedBus (opcional) | 100% localmente en el dispositivo (SQLite Room) | Exclusivamente al portal oficial de MiRedBus Salta vía HTTPS (modo anónimo con captcha, o sesión autenticada opcional) | Consultar el saldo oficial |
 | **Alias de la Tarjeta** | Ingresado por el usuario (ej. "Mi Tarjeta") | 100% localmente en el dispositivo | **Nunca** | Identificación visual en la UI |
 | **Historial de Saldos** | Calculado tras cada consulta | 100% localmente en el dispositivo | **Nunca** | Mostrar la evolución del saldo al usuario |
-| **Tarifa de Referencia** | Configurada por el usuario en el detalle de la tarjeta (por defecto $1.450) | Solo en memoria mientras el detalle está abierto (no se guarda) | **Nunca** | Calcular viajes restantes disponibles |
+| **Tarifa de Referencia** | Configurada por el usuario en el detalle de la tarjeta (por defecto $1.450) | 100% localmente en el dispositivo (SharedPreferences) | **Nunca** | Calcular viajes restantes disponibles |
 | **Imágenes de Captcha** | Descargadas temporalmente del portal de RedBus | En memoria RAM volátil | **Nunca** | Resolución automática del captcha en el equipo |
 | **Sesión RedBus (cookies)** | Portal oficial | CookieManager privado de la app | Solo a salta.miredbus.com.ar | Consultar tarjetas vinculadas sin captcha |
 | **Monederos, número interno, descripción y cargas pendientes** (cuenta RedBus opcional) | Portal oficial, a través de tu sesión | Localmente en el dispositivo (SQLite Room); las cargas pendientes, solo en memoria | **Nunca** | Mostrar el saldo de cada monedero y avisar cargas pendientes de acreditación |

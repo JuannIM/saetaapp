@@ -29,7 +29,7 @@ object PrivacyPolicyContent {
         ),
         PolicySection(
             title = "6. Control y Eliminación de Datos",
-            content = "Tú tienes el control total sobre tus datos. Puedes editar o eliminar cualquier tarjeta en cualquier momento; al eliminarla, se borra instantáneamente todo su historial asociado. Si conectaste tu cuenta de RedBus, la opción \"Desconectar\" elimina las cookies de sesión del portal del dispositivo; tus tarjetas e historial locales permanecen intactos. Al desinstalar la app, todos los datos se destruyen permanentemente del dispositivo."
+            content = "Tú tienes el control total sobre tus datos. Puedes editar o eliminar cualquier tarjeta en cualquier momento; al eliminarla, se borra instantáneamente todo su historial asociado. La tarifa de referencia que configuras se guarda localmente en el dispositivo (SharedPreferences) y nunca se transmite. Si conectaste tu cuenta de RedBus, la opción \"Desconectar\" elimina las cookies de sesión del portal del dispositivo; tus tarjetas e historial locales permanecen intactos. Al desinstalar la app, todos los datos se destruyen permanentemente del dispositivo."
         ),
         PolicySection(
             title = "7. Descargo de Responsabilidad",

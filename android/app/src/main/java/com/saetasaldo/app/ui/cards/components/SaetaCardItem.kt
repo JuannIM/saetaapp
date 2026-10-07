@@ -25,9 +25,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.saetasaldo.app.data.local.FareStore
 import com.saetasaldo.app.domain.model.SaetaCard
 import com.saetasaldo.app.ui.theme.SaetaBluePrimary
 import com.saetasaldo.app.ui.theme.SaetaBlueSecondary
@@ -106,7 +108,7 @@ fun SaetaCardItem(
                         fontSize = 32.sp,
                         fontWeight = FontWeight.ExtraBold
                     )
-                    card.tripsSubtitle()?.let {
+                    card.tripsSubtitle(FareStore(LocalContext.current).get())?.let {
                         Text(
                             text = it,
                             color = Color.White.copy(alpha = 0.85f),
